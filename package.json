@@ -1,0 +1,12 @@
+{
+  "name": "web-editor",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w twin-web",
+    "build": "npm run build -w twin-web",
+    "preview": "npm run preview -w twin-web"
+  }
+}

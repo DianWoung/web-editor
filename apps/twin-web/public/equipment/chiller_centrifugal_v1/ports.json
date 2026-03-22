@@ -1,0 +1,18 @@
+{
+  "ports": [
+    {
+      "id": "chw_in",
+      "name": "冷冻回水入口",
+      "position": [-1.5, 0.2, 0],
+      "system": "CHW",
+      "direction": "in"
+    },
+    {
+      "id": "chw_out",
+      "name": "冷冻供水出口",
+      "position": [1.5, 0.2, 0],
+      "system": "CHW",
+      "direction": "out"
+    }
+  ]
+}

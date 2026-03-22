@@ -1,0 +1,304 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.45;
+
+  /**
+   * 孪生运维台（机房数字孪生编排器）
+   * 深 Slate 基底 + 冰青强调；与 src/theme/sceneTheme.ts 画布色一致。
+   */
+  --twin-bg-base: #0c121c;
+  /* 与 3D 清屏色阶衔接，避免侧栏与视窗明暗断层 */
+  --twin-bg-raised: #1a2838;
+  --twin-bg-panel: #152232;
+  --twin-bg-input: #0e1622;
+  --twin-bg-card: #1a2d42;
+  --twin-border: #2a3f56;
+  --twin-border-hover: #3d5a78;
+  --twin-text: #e8f0f7;
+  --twin-text-muted: #8fa3b8;
+  --twin-text-label: #9eb0c4;
+  --twin-accent: #45c4e8;
+  --twin-accent-dim: #2a8faf;
+  --twin-on-accent: #061018;
+  --twin-danger-bg: #2a1a1f;
+  --twin-danger-border: #6b2f36;
+  --twin-danger-text: #fecaca;
+
+  background: var(--twin-bg-base);
+  color: var(--twin-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.editor-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.editor-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--twin-border);
+  background: var(--twin-bg-raised);
+}
+
+.editor-header h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.editor-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.panel {
+  width: 260px;
+  padding: 12px;
+  background: var(--twin-bg-panel);
+  border-right: 1px solid var(--twin-border);
+  overflow: auto;
+}
+
+.panel.props {
+  border-right: none;
+  border-left: 1px solid var(--twin-border);
+}
+
+.panel h2 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--twin-text);
+}
+
+.editor-canvas-wrap {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--twin-bg-raised);
+}
+
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.palette-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-card);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.palette-item:hover {
+  border-color: var(--twin-border-hover);
+  box-shadow: 0 0 0 1px rgba(69, 196, 232, 0.12);
+}
+
+.palette-title {
+  display: block;
+  font-weight: 600;
+}
+
+.palette-meta {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--twin-text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.field input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-input);
+  color: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--twin-accent-dim);
+  box-shadow: 0 0 0 2px rgba(69, 196, 232, 0.15);
+}
+
+.props-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--twin-border);
+}
+
+.props-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--twin-text-label);
+}
+
+.vec3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.vec3 label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--twin-text-label);
+}
+
+.vec3 input {
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-input);
+  color: inherit;
+}
+
+.vec3 input:focus {
+  outline: none;
+  border-color: var(--twin-accent-dim);
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.primary {
+  background: var(--twin-accent);
+  color: var(--twin-on-accent);
+  font-weight: 600;
+}
+
+.primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 0 12px rgba(69, 196, 232, 0.25);
+}
+
+.secondary {
+  background: var(--twin-bg-card);
+  border-color: var(--twin-border);
+  color: var(--twin-text);
+}
+
+.secondary:hover {
+  border-color: var(--twin-border-hover);
+}
+
+.toolbar {
+  border-top: 1px solid var(--twin-border);
+  background: var(--twin-bg-raised);
+  padding: 10px 12px;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-hint {
+  font-size: 0.78rem;
+  color: var(--twin-text-muted);
+}
+
+.toolbar-hint code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--twin-bg-input);
+  border: 1px solid var(--twin-border);
+  color: var(--twin-accent);
+}
+
+.toolbar-error {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--twin-danger-border);
+  background: var(--twin-danger-bg);
+  color: var(--twin-danger-text);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  white-space: pre-wrap;
+}
+
+.linkish {
+  border: none;
+  background: transparent;
+  color: var(--twin-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.linkish:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--twin-text-muted);
+}
+
+.small {
+  font-size: 0.82rem;
+}
+
+.error {
+  color: var(--twin-danger-text);
+  font-size: 0.85rem;
+}

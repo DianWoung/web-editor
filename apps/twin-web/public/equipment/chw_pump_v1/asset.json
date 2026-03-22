@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "chw_pump_v1",
+  "displayName": "冷冻水泵",
+  "type": "pump",
+  "defaultSystem": "CHWP",
+  "bounds": {
+    "halfExtents": [0.4, 0.4, 0.4]
+  },
+  "modelGlb": false
+}
