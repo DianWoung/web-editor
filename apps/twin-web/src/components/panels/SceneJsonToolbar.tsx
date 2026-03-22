@@ -1,12 +1,11 @@
 import { useRef, type ChangeEvent } from 'react'
-import { formatSceneParseError, parseSceneJson } from '@/schemas/scene'
 import { useSceneStore } from '@/store/sceneStore'
+import { loadDemoSceneIntoStore } from '@/services/loadDemoScene'
 
 export function SceneJsonToolbar() {
   const fileRef = useRef<HTMLInputElement>(null)
   const exportSceneJson = useSceneStore((s) => s.exportSceneJson)
   const importSceneJsonText = useSceneStore((s) => s.importSceneJsonText)
-  const loadScene = useSceneStore((s) => s.loadScene)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const lastError = useSceneStore((s) => s.editorUi.lastError)
   const clearError = useSceneStore((s) => s.clearError)
@@ -33,18 +32,8 @@ export function SceneJsonToolbar() {
 
   const loadDemo = async () => {
     clearError()
-    const res = await fetch('/scenes/demo.scene.json')
-    if (!res.ok) {
-      useSceneStore.getState().setError(`示例场景加载失败：HTTP ${res.status}`)
-      return
-    }
-    const json: unknown = await res.json()
-    const parsed = parseSceneJson(json)
-    if (!parsed.success) {
-      useSceneStore.getState().setError(`示例场景校验失败：\n${formatSceneParseError(parsed.error)}`)
-      return
-    }
-    loadScene(parsed.data)
+    const r = await loadDemoSceneIntoStore()
+    if (!r.ok) useSceneStore.getState().setError(r.error)
   }
 
   return (

@@ -52,8 +52,8 @@ export function EditorPage() {
   return (
     <div className="editor-root">
       <header className="editor-header">
-        <h1>机房场景编排器</h1>
-        <p className="muted small">阶段 1 MVP · React Three Fiber</p>
+        <h1>场景编排</h1>
+        <p className="muted small">内部工具 · 设备库与管线 JSON</p>
       </header>
       <div className="editor-body">
         <DevicePalette catalog={catalog} loadError={catalogError} />

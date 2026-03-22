@@ -1,5 +1,12 @@
 # twin-web — 阶段 1 MVP 场景编排器
 
+## 路由（阶段 2）
+
+- `/` → 重定向到 **`/overview`**
+- **`/overview`**：三维总览（只读场景 + 指标/模式/AI 摘要侧栏，点击设备进详情）
+- **`/detail/:deviceId`**：设备详情（Mock 点位、ECharts 趋势、告警、模式与策略说明）
+- **`/editor`**：场景编排（阶段 1）
+
 ## 视觉主题（孪生运维台）
 
 统一为 **深 Slate 基底 + 冰青强调（`#45c4e8`）**：侧栏/工具条见 `src/index.css` 的 `--twin-*` 变量；3D 清屏、光照、地面、占位设备见 `src/theme/sceneTheme.ts`。管线系统色在 `src/constants/systemColors.ts`，与主色同系、饱和度偏低，避免「彩虹管线」。改主题时请以这两处为唯一来源。

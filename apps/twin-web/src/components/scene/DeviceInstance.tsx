@@ -13,15 +13,17 @@ type Props = {
   device: Device
   ports: PortDef[]
   modelGlb: boolean
+  /** editor：编排交互；viewer：总览只读，点击进详情 */
+  mode?: 'editor' | 'viewer'
+  onOpenDevice?: (deviceId: string) => void
 }
 
-export function DeviceInstance({ device, ports, modelGlb }: Props) {
+export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpenDevice }: Props) {
   const groupRef = useRef<Group>(null)
   const [tcObject, setTcObject] = useState<Group | null>(null)
   const draggingRef = useRef(false)
   const [glbScene, setGlbScene] = useState<Group | null>(null)
   const [glbFailed, setGlbFailed] = useState(false)
-
   const selection = useSceneStore((s) => s.selection)
   const transformMode = useSceneStore((s) => s.editorUi.transformMode)
   const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
@@ -55,7 +57,9 @@ export function DeviceInstance({ device, ports, modelGlb }: Props) {
         if (!cancelled) {
           setGlbFailed(true)
           setGlbScene(null)
-          setError(`GLB 加载失败：${device.assetId}（已使用占位体）`)
+          if (mode === 'editor') {
+            setError(`GLB 加载失败：${device.assetId}（已使用占位体）`)
+          }
         }
       },
     )
@@ -64,7 +68,7 @@ export function DeviceInstance({ device, ports, modelGlb }: Props) {
       setGlbScene(null)
       setGlbFailed(false)
     }
-  }, [device.assetId, device.id, modelGlb, setError])
+  }, [device.assetId, device.id, mode, modelGlb, setError])
 
   useLayoutEffect(() => {
     const g = groupRef.current
@@ -83,6 +87,10 @@ export function DeviceInstance({ device, ports, modelGlb }: Props) {
 
   const handleGroupClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation()
+    if (mode === 'viewer') {
+      onOpenDevice?.(device.id)
+      return
+    }
     setSelection({ kind: 'device', deviceId: device.id })
   }
 
@@ -116,16 +124,17 @@ export function DeviceInstance({ device, ports, modelGlb }: Props) {
             />
           </mesh>
         )}
-        {ports.map((p) => (
-          <PortMarker
-            key={p.id}
-            device={device}
-            port={p}
-            selected={selection?.kind === 'port' && selection.deviceId === device.id && selection.portId === p.id}
-            wireActive={!!wireFrom}
-            onPick={() => handlePortPick(p.id)}
-          />
-        ))}
+        {mode === 'editor' &&
+          ports.map((p) => (
+            <PortMarker
+              key={p.id}
+              device={device}
+              port={p}
+              selected={selection?.kind === 'port' && selection.deviceId === device.id && selection.portId === p.id}
+              wireActive={!!wireFrom}
+              onPick={() => handlePortPick(p.id)}
+            />
+          ))}
       </group>
 
       {isDeviceSelected && tcObject ? (
