@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
-import { OrbitControls, SoftShadows } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
 import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
@@ -24,7 +24,7 @@ export function ViewerCanvas({ modelGlbByAssetId }: Props) {
 
   return (
     <Canvas
-      shadows="soft"
+      shadows
       gl={{
         antialias: true,
         outputColorSpace: SRGBColorSpace,
@@ -56,7 +56,6 @@ export function ViewerCanvas({ modelGlbByAssetId }: Props) {
         shadow-normalBias={0.03}
         shadow-radius={9}
       />
-      <SoftShadows size={12} samples={12} focus={0.45} />
       <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
       <RoomFloor />
       {pipes.map((p) => (

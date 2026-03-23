@@ -1,14 +1,60 @@
 import { useSceneStore } from '@/store/sceneStore'
+import type { SnapGridOption } from '@/store/sceneStore'
 
 export function PropertiesPanel() {
   const devices = useSceneStore((s) => s.devices)
+  const pipes = useSceneStore((s) => s.pipes)
   const selection = useSceneStore((s) => s.selection)
   const transformMode = useSceneStore((s) => s.editorUi.transformMode)
   const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
+  const snapGrid = useSceneStore((s) => s.editorUi.snapGrid)
   const setTransformMode = useSceneStore((s) => s.setTransformMode)
   const setWireFrom = useSceneStore((s) => s.setWireFrom)
+  const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
   const updateDeviceTransform = useSceneStore((s) => s.updateDeviceTransform)
   const updateDeviceName = useSceneStore((s) => s.updateDeviceName)
+  const updateDeviceSystem = useSceneStore((s) => s.updateDeviceSystem)
+  const removeDevice = useSceneStore((s) => s.removeDevice)
+  const duplicateDevice = useSceneStore((s) => s.duplicateDevice)
+  const removePipe = useSceneStore((s) => s.removePipe)
+
+  if (selection?.kind === 'pipe') {
+    const pipe = pipes.find((p) => p.id === selection.pipeId)
+    if (!pipe) {
+      return (
+        <aside className="panel props">
+          <h2>属性</h2>
+          <p className="muted">管线不存在或已删除。</p>
+        </aside>
+      )
+    }
+    return (
+      <aside className="panel props">
+        <h2>管线</h2>
+        <label className="field">
+          <span>ID</span>
+          <input value={pipe.id} readOnly />
+        </label>
+        <label className="field">
+          <span>起点</span>
+          <input value={pipe.from} readOnly />
+        </label>
+        <label className="field">
+          <span>终点</span>
+          <input value={pipe.to} readOnly />
+        </label>
+        <label className="field">
+          <span>系统</span>
+          <input value={pipe.system} readOnly />
+        </label>
+        <section className="props-section">
+          <button type="button" className="secondary danger-outline" onClick={() => removePipe(pipe.id)}>
+            删除此管线
+          </button>
+        </section>
+      </aside>
+    )
+  }
 
   const device =
     selection?.kind === 'device'
@@ -21,17 +67,30 @@ export function PropertiesPanel() {
     return (
       <aside className="panel props">
         <h2>属性</h2>
-        <p className="muted">选中一台设备以编辑位姿与名称。</p>
+        <p className="muted">选中设备或管线以编辑；也可在底部「场景对象」列表中点选。</p>
+        <section className="props-section">
+          <h3>吸附网格</h3>
+          <select
+            className="field-select"
+            value={snapGrid}
+            onChange={(e) => setSnapGrid(Number(e.target.value) as SnapGridOption)}
+          >
+            <option value={0}>关闭</option>
+            <option value={0.25}>0.25 m</option>
+            <option value={0.5}>0.5 m</option>
+            <option value={1}>1 m</option>
+          </select>
+        </section>
         <section className="props-section">
           <h3>连线</h3>
           <p className="muted small">
-            点击端口 A 再点端口 B 创建管线。当前起点：
-            {wireFrom ? `${wireFrom.deviceId}.${wireFrom.portId}` : '未选择'}
+            端口起点：{wireFrom ? `${wireFrom.deviceId}.${wireFrom.portId}` : '未选择'}
           </p>
           <button type="button" className="secondary" disabled={!wireFrom} onClick={() => setWireFrom(null)}>
             清除端口起点
           </button>
         </section>
+        <p className="muted small props-shortcuts">快捷键：Delete 删除选中 · Esc 取消选择/放置</p>
       </aside>
     )
   }
@@ -58,6 +117,10 @@ export function PropertiesPanel() {
       <label className="field">
         <span>ID</span>
         <input value={device.id} readOnly />
+      </label>
+      <label className="field">
+        <span>系统归属</span>
+        <input value={device.system} onChange={(e) => updateDeviceSystem(device.id, e.target.value)} />
       </label>
       <section className="props-section">
         <h3>位置（米）</h3>
@@ -92,7 +155,7 @@ export function PropertiesPanel() {
         </div>
       </section>
       <section className="props-section">
-        <h3>旋转（度 · XYZ 顺序）</h3>
+        <h3>旋转（度 · XYZ）</h3>
         <div className="vec3">
           <label>
             Rx
@@ -143,14 +206,39 @@ export function PropertiesPanel() {
         </div>
       </section>
       <section className="props-section">
+        <h3>吸附</h3>
+        <select
+          className="field-select"
+          value={snapGrid}
+          onChange={(e) => setSnapGrid(Number(e.target.value) as SnapGridOption)}
+        >
+          <option value={0}>关闭</option>
+          <option value={0.25}>0.25 m</option>
+          <option value={0.5}>0.5 m</option>
+          <option value={1}>1 m</option>
+        </select>
+      </section>
+      <section className="props-section">
+        <h3>对象操作</h3>
+        <div className="btn-row btn-row--wrap">
+          <button type="button" className="secondary" onClick={() => duplicateDevice(device.id)}>
+            复制实例
+          </button>
+          <button type="button" className="secondary danger-outline" onClick={() => removeDevice(device.id)}>
+            删除设备
+          </button>
+        </div>
+      </section>
+      <section className="props-section">
         <h3>连线</h3>
         <p className="muted small">
-          端口起点：{wireFrom ? `${wireFrom.deviceId}.${wireFrom.portId}` : '未选择（点选第一个端口）'}
+          端口起点：{wireFrom ? `${wireFrom.deviceId}.${wireFrom.portId}` : '未选择'}
         </p>
         <button type="button" className="secondary" disabled={!wireFrom} onClick={() => setWireFrom(null)}>
           清除端口起点
         </button>
       </section>
+      <p className="muted small props-shortcuts">Delete 删除 · Esc 取消</p>
     </aside>
   )
 }

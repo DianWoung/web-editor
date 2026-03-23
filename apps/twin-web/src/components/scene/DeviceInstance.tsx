@@ -128,7 +128,6 @@ export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpe
           ports.map((p) => (
             <PortMarker
               key={p.id}
-              device={device}
               port={p}
               selected={selection?.kind === 'port' && selection.deviceId === device.id && selection.portId === p.id}
               wireActive={!!wireFrom}

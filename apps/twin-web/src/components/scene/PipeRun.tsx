@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import type { ThreeEvent } from '@react-three/fiber'
 import { Quaternion, Vector3 } from 'three'
 import type { Pipe } from '@/schemas/pipe'
 import type { Device } from '@/schemas/device'
@@ -15,6 +16,10 @@ type Props = {
   pipe: Pipe
   devices: Device[]
   portGroups: PortGroup[]
+  /** 编排页可点选管线 */
+  editorInteractive?: boolean
+  selected?: boolean
+  onSelectPipe?: (pipeId: string) => void
 }
 
 function resolveEndpointWorld(
@@ -33,7 +38,14 @@ function resolveEndpointWorld(
   return true
 }
 
-export function PipeRun({ pipe, devices, portGroups }: Props) {
+export function PipeRun({
+  pipe,
+  devices,
+  portGroups,
+  editorInteractive,
+  selected,
+  onSelectPipe,
+}: Props) {
   const layout = useMemo(() => {
     const a = new Vector3()
     const b = new Vector3()
@@ -58,7 +70,9 @@ export function PipeRun({ pipe, devices, portGroups }: Props) {
   const segments = useMemo(() => {
     if (points.length < 2) return null
     const out: ReactNode[] = []
-    const q = new Quaternion()
+
+    const selEmissive = selected && !conflict ? '#2a8faf' : conflict ? sceneTheme.pipeConflictEmissive : '#000000'
+    const selEmissiveInt = selected && !conflict ? 0.22 : conflict ? 0.28 : 0
 
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[i]!
@@ -67,16 +81,17 @@ export function PipeRun({ pipe, devices, portGroups }: Props) {
       const len = dir.length()
       if (len < 1e-6) continue
       dir.normalize()
+      // 每段使用独立 Vector3 / Quaternion：复用同一对象会导致 R3F 提交时全部被写成最后一段的朝向
       const mid = new Vector3().addVectors(p0, p1).multiplyScalar(0.5)
-      q.setFromUnitVectors(_axis, dir)
+      const q = new Quaternion().setFromUnitVectors(_axis, dir)
 
       out.push(
         <mesh key={`seg-${pipe.id}-${i}`} position={mid} quaternion={q} scale={[1, len, 1]} castShadow>
           <cylinderGeometry args={[0.06, 0.06, 1, 12]} />
           <meshStandardMaterial
             color={colorHex}
-            emissive={conflict ? sceneTheme.pipeConflictEmissive : '#000000'}
-            emissiveIntensity={conflict ? 0.28 : 0}
+            emissive={selEmissive}
+            emissiveIntensity={selEmissiveInt}
             metalness={0.25}
             roughness={0.45}
           />
@@ -91,8 +106,8 @@ export function PipeRun({ pipe, devices, portGroups }: Props) {
           <sphereGeometry args={[0.09, 12, 12]} />
           <meshStandardMaterial
             color={colorHex}
-            emissive={conflict ? sceneTheme.pipeConflictEmissive : '#000000'}
-            emissiveIntensity={conflict ? 0.28 : 0}
+            emissive={selEmissive}
+            emissiveIntensity={selEmissiveInt}
             metalness={0.25}
             roughness={0.45}
           />
@@ -101,8 +116,18 @@ export function PipeRun({ pipe, devices, portGroups }: Props) {
     }
 
     return out
-  }, [colorHex, conflict, pipe.id, points])
+  }, [colorHex, conflict, pipe.id, points, selected])
 
   if (!segments) return null
-  return <group>{segments}</group>
+
+  const handleGroupClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    if (editorInteractive) onSelectPipe?.(pipe.id)
+  }
+
+  return (
+    <group onClick={editorInteractive ? handleGroupClick : undefined}>
+      {segments}
+    </group>
+  )
 }

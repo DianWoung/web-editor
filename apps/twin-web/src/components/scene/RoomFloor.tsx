@@ -1,8 +1,15 @@
 import { useMemo } from 'react'
+import type { ThreeEvent } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
 import { sceneTheme } from '@/theme/sceneTheme'
 
-export function RoomFloor() {
+type Props = {
+  showGrid?: boolean
+  /** 地面点击（编排页「地面放置」模式） */
+  onFloorClick?: (point: [number, number, number]) => void
+}
+
+export function RoomFloor({ showGrid = true, onFloorClick }: Props) {
   const gridConfig = useMemo(
     () => ({
       cellSize: 1,
@@ -19,10 +26,20 @@ export function RoomFloor() {
     [],
   )
 
+  const handlePlaneClick = (e: ThreeEvent<MouseEvent>) => {
+    e.stopPropagation()
+    onFloorClick?.([e.point.x, e.point.y, e.point.z])
+  }
+
   return (
     <>
-      <Grid position={[0, 0, 0]} {...gridConfig} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow position={[0, -0.001, 0]}>
+      {showGrid ? <Grid position={[0, 0, 0]} {...gridConfig} /> : null}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+        position={[0, -0.001, 0]}
+        onClick={onFloorClick ? handlePlaneClick : undefined}
+      >
         <planeGeometry args={[200, 200]} />
         <meshStandardMaterial
           color={sceneTheme.floorColor}

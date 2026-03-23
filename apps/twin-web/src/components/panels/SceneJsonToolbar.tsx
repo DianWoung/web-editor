@@ -1,5 +1,6 @@
 import { useRef, type ChangeEvent } from 'react'
 import { useSceneStore } from '@/store/sceneStore'
+import type { SnapGridOption } from '@/store/sceneStore'
 import { loadDemoSceneIntoStore } from '@/services/loadDemoScene'
 
 export function SceneJsonToolbar() {
@@ -8,6 +9,12 @@ export function SceneJsonToolbar() {
   const importSceneJsonText = useSceneStore((s) => s.importSceneJsonText)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const lastError = useSceneStore((s) => s.editorUi.lastError)
+  const showGrid = useSceneStore((s) => s.editorUi.showGrid)
+  const showPipes = useSceneStore((s) => s.editorUi.showPipes)
+  const snapGrid = useSceneStore((s) => s.editorUi.snapGrid)
+  const setShowGrid = useSceneStore((s) => s.setShowGrid)
+  const setShowPipes = useSceneStore((s) => s.setShowPipes)
+  const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
   const clearError = useSceneStore((s) => s.clearError)
   const clearScene = useSceneStore((s) => s.clearScene)
 
@@ -56,6 +63,29 @@ export function SceneJsonToolbar() {
           压测：80 台 + 管线
         </button>
         <span className="toolbar-hint">性能基线：URL 加 <code>?stress=80</code> 启动即生成</span>
+      </div>
+      <div className="toolbar-row toolbar-row--secondary">
+        <label className="toolbar-toggle">
+          <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} />
+          <span>显示网格</span>
+        </label>
+        <label className="toolbar-toggle">
+          <input type="checkbox" checked={showPipes} onChange={(e) => setShowPipes(e.target.checked)} />
+          <span>显示管线</span>
+        </label>
+        <label className="toolbar-snap">
+          <span className="toolbar-snap-label">吸附</span>
+          <select
+            className="toolbar-select"
+            value={snapGrid}
+            onChange={(e) => setSnapGrid(Number(e.target.value) as SnapGridOption)}
+          >
+            <option value={0}>关</option>
+            <option value={0.25}>0.25 m</option>
+            <option value={0.5}>0.5 m</option>
+            <option value={1}>1 m</option>
+          </select>
+        </label>
       </div>
       {lastError ? (
         <div className="toolbar-error">

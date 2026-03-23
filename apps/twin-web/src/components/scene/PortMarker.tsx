@@ -1,20 +1,16 @@
-import { useMemo } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import type { Device } from '@/schemas/device'
 import type { PortDef } from '@/schemas/port'
 import { systemColor } from '@/constants/systemColors'
-import { getPortWorldPosition } from '@/utils/portWorld'
 
 type Props = {
-  device: Device
   port: PortDef
   selected: boolean
   wireActive: boolean
   onPick: () => void
 }
 
-export function PortMarker({ device, port, selected, wireActive, onPick }: Props) {
-  const world = useMemo(() => getPortWorldPosition(device, port), [device, port])
+/** 端口在设备局部坐标；父级 group 已含设备位姿，勿再套一层世界坐标（否则会双重变换）。 */
+export function PortMarker({ port, selected, wireActive, onPick }: Props) {
   const color = systemColor(port.system)
   const scale = wireActive ? 1.25 : 1
 
@@ -25,7 +21,7 @@ export function PortMarker({ device, port, selected, wireActive, onPick }: Props
 
   return (
     <mesh
-      position={world}
+      position={[port.position[0], port.position[1], port.position[2]]}
       scale={scale}
       onPointerDown={handlePointerDown}
       castShadow

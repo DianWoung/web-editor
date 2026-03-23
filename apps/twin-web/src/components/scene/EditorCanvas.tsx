@@ -1,6 +1,6 @@
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, SoftShadows } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
 import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
@@ -9,17 +9,29 @@ import { sceneTheme } from '@/theme/sceneTheme'
 
 type Props = {
   modelGlbByAssetId: Record<string, boolean>
+  /** 地面放置：有值时点击地面在该处创建设备 */
+  floorPlacementActive?: boolean
+  onFloorPlace?: (point: [number, number, number]) => void
 }
 
-export function EditorCanvas({ modelGlbByAssetId }: Props) {
+export function EditorCanvas({
+  modelGlbByAssetId,
+  floorPlacementActive,
+  onFloorPlace,
+}: Props) {
   const devices = useSceneStore((s) => s.devices)
   const portGroups = useSceneStore((s) => s.portGroups)
   const pipes = useSceneStore((s) => s.pipes)
+  const selection = useSceneStore((s) => s.selection)
+  const showGrid = useSceneStore((s) => s.editorUi.showGrid)
+  const showPipes = useSceneStore((s) => s.editorUi.showPipes)
   const setSelection = useSceneStore((s) => s.setSelection)
+
+  const selectedPipeId = selection?.kind === 'pipe' ? selection.pipeId : null
 
   return (
     <Canvas
-      shadows="soft"
+      shadows
       gl={{
         antialias: true,
         outputColorSpace: SRGBColorSpace,
@@ -30,7 +42,12 @@ export function EditorCanvas({ modelGlbByAssetId }: Props) {
       onPointerMissed={(e) => {
         if (e.button === 0) setSelection(null)
       }}
-      style={{ width: '100%', height: '100%', background: sceneTheme.background }}
+      style={{
+        width: '100%',
+        height: '100%',
+        background: sceneTheme.background,
+        cursor: floorPlacementActive ? 'crosshair' : undefined,
+      }}
     >
       <color attach="background" args={[sceneTheme.background]} />
       <ambientLight color={sceneTheme.ambientColor} intensity={sceneTheme.ambientIntensity} />
@@ -58,12 +75,8 @@ export function EditorCanvas({ modelGlbByAssetId }: Props) {
         shadow-normalBias={0.03}
         shadow-radius={9}
       />
-      <SoftShadows size={12} samples={12} focus={0.45} />
       <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
-      <RoomFloor />
-      {pipes.map((p) => (
-        <PipeRun key={p.id} pipe={p} devices={devices} portGroups={portGroups} />
-      ))}
+      <RoomFloor showGrid={showGrid} onFloorClick={floorPlacementActive ? onFloorPlace : undefined} />
       {devices.map((d) => {
         const pg = portGroups.find((g) => g.deviceId === d.id)
         const ports = pg?.ports ?? []
@@ -76,6 +89,19 @@ export function EditorCanvas({ modelGlbByAssetId }: Props) {
           />
         )
       })}
+      {showPipes
+        ? pipes.map((p) => (
+            <PipeRun
+              key={p.id}
+              pipe={p}
+              devices={devices}
+              portGroups={portGroups}
+              editorInteractive
+              selected={p.id === selectedPipeId}
+              onSelectPipe={(id) => setSelection({ kind: 'pipe', pipeId: id })}
+            />
+          ))
+        : null}
     </Canvas>
   )
 }

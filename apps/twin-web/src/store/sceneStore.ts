@@ -4,13 +4,18 @@ import type { Pipe } from '@/schemas/pipe'
 import type { PortGroup } from '@/schemas/port'
 import { formatSceneParseError, parseSceneJson, type SceneFile } from '@/schemas/scene'
 import type { CatalogAsset } from '@/services/loadEquipmentCatalog'
+import { parsePipeEndpoint } from '@/services/pipeCollision'
+import { snapVec3 } from '@/utils/snap'
 
 export type Selection =
   | { kind: 'device'; deviceId: string }
   | { kind: 'port'; deviceId: string; portId: string }
+  | { kind: 'pipe'; pipeId: string }
   | null
 
 export type TransformMode = 'translate' | 'rotate'
+
+export type SnapGridOption = 0 | 0.25 | 0.5 | 1
 
 type SceneState = {
   version: number
@@ -22,6 +27,9 @@ type SceneState = {
     wireFrom: { deviceId: string; portId: string } | null
     transformMode: TransformMode
     lastError: string | null
+    showGrid: boolean
+    showPipes: boolean
+    snapGrid: SnapGridOption
   }
 }
 
@@ -31,6 +39,9 @@ type SceneActions = {
   setSelection: (s: Selection) => void
   setTransformMode: (m: TransformMode) => void
   setWireFrom: (v: { deviceId: string; portId: string } | null) => void
+  setShowGrid: (v: boolean) => void
+  setShowPipes: (v: boolean) => void
+  setSnapGrid: (g: SnapGridOption) => void
   loadScene: (scene: SceneFile) => void
   clearScene: () => void
   addDeviceFromAsset: (asset: CatalogAsset, position?: [number, number, number]) => void
@@ -40,6 +51,9 @@ type SceneActions = {
     rotationDeg: [number, number, number],
   ) => void
   updateDeviceName: (deviceId: string, name: string) => void
+  updateDeviceSystem: (deviceId: string, system: string) => void
+  removeDevice: (deviceId: string) => void
+  duplicateDevice: (deviceId: string) => void
   removePipe: (pipeId: string) => void
   tryConnectPorts: (a: { deviceId: string; portId: string }, b: { deviceId: string; portId: string }) => void
   exportSceneJson: () => string
@@ -55,17 +69,22 @@ function newPipeId() {
   return `PIPE-${crypto.randomUUID().slice(0, 8)}`
 }
 
+const editorUiDefaults = {
+  wireFrom: null as { deviceId: string; portId: string } | null,
+  transformMode: 'translate' as TransformMode,
+  lastError: null as string | null,
+  showGrid: true,
+  showPipes: true,
+  snapGrid: 0 as SnapGridOption,
+}
+
 const initial: SceneState = {
   version: 1,
   devices: [],
   portGroups: [],
   pipes: [],
   selection: null,
-  editorUi: {
-    wireFrom: null,
-    transformMode: 'translate',
-    lastError: null,
-  },
+  editorUi: { ...editorUiDefaults },
 }
 
 export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
@@ -80,6 +99,9 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
   setTransformMode: (transformMode) =>
     set((s) => ({ editorUi: { ...s.editorUi, transformMode } })),
   setWireFrom: (wireFrom) => set((s) => ({ editorUi: { ...s.editorUi, wireFrom } })),
+  setShowGrid: (showGrid) => set((s) => ({ editorUi: { ...s.editorUi, showGrid } })),
+  setShowPipes: (showPipes) => set((s) => ({ editorUi: { ...s.editorUi, showPipes } })),
+  setSnapGrid: (snapGrid) => set((s) => ({ editorUi: { ...s.editorUi, snapGrid } })),
 
   loadScene: (scene) =>
     set({
@@ -94,13 +116,18 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
   clearScene: () =>
     set({
       ...initial,
-      editorUi: { ...get().editorUi, wireFrom: null, lastError: null },
+      editorUi: { ...editorUiDefaults },
     }),
 
   addDeviceFromAsset: (asset, position) => {
     const id = newDeviceId(asset.type === 'chiller' ? 'CH' : 'PUMP')
     const [, hy] = asset.halfExtents
-    const pos: [number, number, number] = position ?? [0, hy, 0]
+    const g = get().editorUi.snapGrid
+    const raw: [number, number, number] = position
+      ? [position[0], hy, position[2]]
+      : [0, hy, 0]
+    const pos = g > 0 ? snapVec3(raw, g) : raw
+    pos[1] = hy
     const device: Device = {
       id,
       type: asset.type,
@@ -123,21 +150,70 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     }))
   },
 
-  updateDeviceTransform: (deviceId, position, rotationDeg) =>
+  updateDeviceTransform: (deviceId, position, rotationDeg) => {
+    const g = get().editorUi.snapGrid
+    const pos = g > 0 ? snapVec3(position, g) : position
     set((s) => ({
-      devices: s.devices.map((d) =>
-        d.id === deviceId ? { ...d, position, rotation: rotationDeg } : d,
-      ),
-    })),
+      devices: s.devices.map((d) => (d.id === deviceId ? { ...d, position: pos, rotation: rotationDeg } : d)),
+    }))
+  },
 
   updateDeviceName: (deviceId, name) =>
     set((s) => ({
       devices: s.devices.map((d) => (d.id === deviceId ? { ...d, name } : d)),
     })),
 
+  updateDeviceSystem: (deviceId, system) =>
+    set((s) => ({
+      devices: s.devices.map((d) => (d.id === deviceId ? { ...d, system } : d)),
+    })),
+
+  removeDevice: (deviceId) =>
+    set((s) => {
+      const devices = s.devices.filter((d) => d.id !== deviceId)
+      const portGroups = s.portGroups.filter((g) => g.deviceId !== deviceId)
+      const pipes = s.pipes.filter((p) => {
+        const fa = parsePipeEndpoint(p.from)
+        const tb = parsePipeEndpoint(p.to)
+        if (!fa || !tb) return true
+        return fa.deviceId !== deviceId && tb.deviceId !== deviceId
+      })
+      let selection = s.selection
+      if (selection?.kind === 'device' && selection.deviceId === deviceId) selection = null
+      if (selection?.kind === 'port' && selection.deviceId === deviceId) selection = null
+      return { devices, portGroups, pipes, selection }
+    }),
+
+  duplicateDevice: (deviceId) => {
+    const d = get().devices.find((x) => x.id === deviceId)
+    const pg = get().portGroups.find((g) => g.deviceId === deviceId)
+    if (!d || !pg) return
+    const newId = newDeviceId(d.type === 'chiller' ? 'CH' : 'PUMP')
+    const g = get().editorUi.snapGrid
+    const raw: [number, number, number] = [d.position[0] + 1.5, d.position[1], d.position[2] + 1.2]
+    const position = g > 0 ? snapVec3(raw, g) : raw
+    const device: Device = {
+      ...d,
+      id: newId,
+      name: `${d.name} 副本`,
+      position,
+    }
+    const npg: PortGroup = {
+      deviceId: newId,
+      ports: pg.ports.map((p) => ({ ...p })),
+    }
+    set((s) => ({
+      devices: [...s.devices, device],
+      portGroups: [...s.portGroups, npg],
+      selection: { kind: 'device', deviceId: newId },
+    }))
+  },
+
   removePipe: (pipeId) =>
     set((s) => ({
       pipes: s.pipes.filter((p) => p.id !== pipeId),
+      selection:
+        s.selection?.kind === 'pipe' && s.selection.pipeId === pipeId ? null : s.selection,
     })),
 
   tryConnectPorts: (from, to) => {
