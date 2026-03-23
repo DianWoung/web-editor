@@ -1,11 +1,13 @@
 import { z } from 'zod'
 import type { PortDef } from '@/schemas/port'
 
-const catalogSchema = z.object({
+export const catalogSchema = z.object({
   assets: z.array(z.string().min(1)),
 })
 
-const assetJsonSchema = z.object({
+export type RenderStyle = 'box' | 'icosahedron' | 'dodecahedron' | 'octahedron'
+
+export const assetJsonSchema = z.object({
   assetVersion: z.number().int().positive(),
   assetId: z.string().min(1),
   displayName: z.string().min(1),
@@ -14,11 +16,13 @@ const assetJsonSchema = z.object({
   bounds: z.object({
     halfExtents: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
   }),
+  /** 占位渲染风格：当 modelGlb=false 时用于生成多面体几何 */
+  renderStyle: z.enum(['box', 'icosahedron', 'dodecahedron', 'octahedron']).optional(),
   /** 为 true 时尝试加载 `/equipment/{assetId}/model.glb` */
   modelGlb: z.boolean().optional(),
 })
 
-const portsFileSchema = z.object({
+export const portsFileSchema = z.object({
   ports: z.array(
     z.object({
       id: z.string().min(1),
@@ -38,6 +42,9 @@ export type CatalogAsset = {
   defaultSystem: string
   halfExtents: [number, number, number]
   modelGlb: boolean
+  /** 当为本地导入资产包时，可能为 blob URL */
+  modelGlbUrl?: string | null
+  renderStyle?: RenderStyle
   portsTemplate: PortDef[]
 }
 
@@ -67,6 +74,45 @@ export async function loadEquipmentCatalog(): Promise<CatalogAsset[]> {
       defaultSystem: a.defaultSystem,
       halfExtents: a.bounds.halfExtents,
       modelGlb: a.modelGlb ?? false,
+      modelGlbUrl: a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null,
+      renderStyle: a.renderStyle ?? 'box',
+      portsTemplate: p.ports.map((x) => ({
+        id: x.id,
+        name: x.name,
+        position: x.position,
+        system: x.system,
+        direction: x.direction,
+      })),
+    })
+  }
+  return out
+}
+
+export async function loadEquipmentAssetsByIds(assetIds: string[]): Promise<CatalogAsset[]> {
+  const uniq = Array.from(new Set(assetIds))
+  const out: CatalogAsset[] = []
+  for (const assetId of uniq) {
+    const [aRes, pRes] = await Promise.all([
+      fetch(`/equipment/${assetId}/asset.json`),
+      fetch(`/equipment/${assetId}/ports.json`),
+    ])
+    if (!aRes.ok) throw new Error(`加载 asset 失败 ${assetId}: ${aRes.status}`)
+    if (!pRes.ok) throw new Error(`加载 ports 失败 ${assetId}: ${pRes.status}`)
+    const aJson: unknown = await aRes.json()
+    const pJson: unknown = await pRes.json()
+    const a = assetJsonSchema.parse(aJson)
+    const p = portsFileSchema.parse(pJson)
+
+    out.push({
+      assetVersion: a.assetVersion,
+      assetId: a.assetId,
+      displayName: a.displayName,
+      type: a.type,
+      defaultSystem: a.defaultSystem,
+      halfExtents: a.bounds.halfExtents,
+      modelGlb: a.modelGlb ?? false,
+      modelGlbUrl: a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null,
+      renderStyle: a.renderStyle ?? 'box',
       portsTemplate: p.ports.map((x) => ({
         id: x.id,
         name: x.name,

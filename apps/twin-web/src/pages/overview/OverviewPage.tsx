@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ViewerCanvas } from '@/components/scene/ViewerCanvas'
-import { loadEquipmentCatalog } from '@/services/loadEquipmentCatalog'
+import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import { loadDemoSceneIntoStore } from '@/services/loadDemoScene'
 import { useSceneStore } from '@/store/sceneStore'
 
@@ -25,10 +25,18 @@ export function OverviewPage() {
     if (useSceneStore.getState().devices.length === 0) void loadDemoSceneIntoStore()
   }, [])
 
-  const modelGlbByAssetId = useMemo(() => {
-    const m: Record<string, boolean> = {}
+  const modelUrlByAssetId = useMemo(() => {
+    const m: Record<string, string | null | undefined> = {}
     catalog?.forEach((a) => {
-      m[a.assetId] = a.modelGlb
+      m[a.assetId] = a.modelGlbUrl ?? (a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null)
+    })
+    return m
+  }, [catalog])
+
+  const renderStyleByAssetId = useMemo(() => {
+    const m: Record<string, RenderStyle | undefined> = {}
+    catalog?.forEach((a) => {
+      m[a.assetId] = a.renderStyle ?? 'box'
     })
     return m
   }, [catalog])
@@ -70,7 +78,7 @@ export function OverviewPage() {
         </section>
       </aside>
       <main className="overview-canvas">
-        <ViewerCanvas modelGlbByAssetId={modelGlbByAssetId} />
+        <ViewerCanvas modelUrlByAssetId={modelUrlByAssetId} renderStyleByAssetId={renderStyleByAssetId} />
         <div className="overview-hint">点击设备进入详情（Mock 数据）</div>
       </main>
     </div>

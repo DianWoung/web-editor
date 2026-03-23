@@ -7,6 +7,7 @@ import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
+import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 
 function EditorOrbitControls() {
   /** drei 使用 three-stdlib 的 OrbitControls，与 @types/three 示例路径类型不兼容，仅依赖 reset() */
@@ -29,14 +30,16 @@ function EditorOrbitControls() {
 }
 
 type Props = {
-  modelGlbByAssetId: Record<string, boolean>
+  modelUrlByAssetId: Record<string, string | null | undefined>
+  renderStyleByAssetId: Record<string, RenderStyle | undefined>
   /** 地面放置：有值时点击地面在该处创建设备 */
   floorPlacementActive?: boolean
   onFloorPlace?: (point: [number, number, number]) => void
 }
 
 export function EditorCanvas({
-  modelGlbByAssetId,
+  modelUrlByAssetId,
+  renderStyleByAssetId,
   floorPlacementActive,
   onFloorPlace,
 }: Props) {
@@ -91,7 +94,7 @@ export function EditorCanvas({
         position={[12, 20, 10]}
         intensity={sceneTheme.directionalIntensity}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-far={64}
         shadow-camera-left={-28}
         shadow-camera-right={28}
@@ -99,7 +102,7 @@ export function EditorCanvas({
         shadow-camera-bottom={-28}
         shadow-bias={-0.00025}
         shadow-normalBias={0.03}
-        shadow-radius={9}
+        shadow-radius={6}
       />
       <EditorOrbitControls />
       <RoomFloor showGrid={showGrid} onFloorClick={floorPlacementActive ? onFloorPlace : undefined} />
@@ -111,7 +114,8 @@ export function EditorCanvas({
             key={d.id}
             device={d}
             ports={ports}
-            modelGlb={modelGlbByAssetId[d.assetId] ?? false}
+            modelUrl={modelUrlByAssetId[d.assetId] ?? null}
+            renderStyle={renderStyleByAssetId[d.assetId] ?? 'box'}
           />
         )
       })}

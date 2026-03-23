@@ -1,3 +1,9 @@
 {
-  "assets": ["chiller_centrifugal_v1", "chw_pump_v1"]
+  "assets": [
+    "chiller_centrifugal_v1",
+    "chw_pump_v1",
+    "aircon_main_icosa_v1",
+    "aircon_main_dodeca_v1",
+    "substation_octa_v1"
+  ]
 }

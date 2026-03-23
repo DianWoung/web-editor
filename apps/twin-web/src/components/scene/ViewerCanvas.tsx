@@ -7,12 +7,14 @@ import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
+import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 
 type Props = {
-  modelGlbByAssetId: Record<string, boolean>
+  modelUrlByAssetId: Record<string, string | null | undefined>
+  renderStyleByAssetId: Record<string, RenderStyle | undefined>
 }
 
-export function ViewerCanvas({ modelGlbByAssetId }: Props) {
+export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId }: Props) {
   const navigate = useNavigate()
   const devices = useSceneStore((s) => s.devices)
   const portGroups = useSceneStore((s) => s.portGroups)
@@ -46,7 +48,7 @@ export function ViewerCanvas({ modelGlbByAssetId }: Props) {
         position={[12, 20, 10]}
         intensity={sceneTheme.directionalIntensity}
         castShadow
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
         shadow-camera-far={64}
         shadow-camera-left={-28}
         shadow-camera-right={28}
@@ -54,10 +56,10 @@ export function ViewerCanvas({ modelGlbByAssetId }: Props) {
         shadow-camera-bottom={-28}
         shadow-bias={-0.00025}
         shadow-normalBias={0.03}
-        shadow-radius={9}
+        shadow-radius={6}
       />
       <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
-      <RoomFloor />
+      <RoomFloor showGrid={false} />
       {pipes.map((p) => (
         <PipeRun key={p.id} pipe={p} devices={devices} portGroups={portGroups} />
       ))}
@@ -69,7 +71,8 @@ export function ViewerCanvas({ modelGlbByAssetId }: Props) {
             key={d.id}
             device={d}
             ports={ports}
-            modelGlb={modelGlbByAssetId[d.assetId] ?? false}
+            modelUrl={modelUrlByAssetId[d.assetId] ?? null}
+            renderStyle={renderStyleByAssetId[d.assetId] ?? 'box'}
             mode="viewer"
             onOpenDevice={openDevice}
           />

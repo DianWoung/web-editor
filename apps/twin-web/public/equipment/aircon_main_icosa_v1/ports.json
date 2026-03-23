@@ -1,0 +1,33 @@
+{
+  "ports": [
+    {
+      "id": "chw_out_left",
+      "name": "冷冻供水（左）",
+      "position": [-0.95, 0.15, 0.0],
+      "system": "CHW",
+      "direction": "out"
+    },
+    {
+      "id": "chw_in_right",
+      "name": "冷冻回水（右）",
+      "position": [0.95, 0.15, 0.0],
+      "system": "CHW",
+      "direction": "in"
+    },
+    {
+      "id": "chwp_out_back",
+      "name": "冷冻供水（后）",
+      "position": [0.0, 0.15, -0.65],
+      "system": "CHWP",
+      "direction": "out"
+    },
+    {
+      "id": "chwp_in_front",
+      "name": "冷冻回水（前）",
+      "position": [0.0, 0.15, 0.65],
+      "system": "CHWP",
+      "direction": "in"
+    }
+  ]
+}
+

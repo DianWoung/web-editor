@@ -5,13 +5,14 @@ import { EditorCanvasHud } from '@/components/panels/EditorCanvasHud'
 import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
-import { loadEquipmentCatalog, type CatalogAsset } from '@/services/loadEquipmentCatalog'
+import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import { useSceneStore } from '@/store/sceneStore'
 
 export function EditorPage() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
+  const [importedCatalog, setImportedCatalog] = useState<CatalogAsset[]>([])
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
   useEffect(() => {
@@ -44,13 +45,38 @@ export function EditorPage() {
     applyStressTest(Math.floor(n))
   }, [applyStressTest])
 
+  const mergedCatalog = useMemo(() => {
+    const base = catalog ?? []
+    const all = [...base, ...importedCatalog]
+    const map = new Map<string, CatalogAsset>()
+    for (const a of all) map.set(a.assetId, a)
+    return Array.from(map.values())
+  }, [catalog, importedCatalog])
+
   const modelGlbByAssetId = useMemo(() => {
-    const m: Record<string, boolean> = {}
-    catalog?.forEach((a) => {
-      m[a.assetId] = a.modelGlb
+    const m: Record<string, string | null | undefined> = {}
+    mergedCatalog.forEach((a) => {
+      m[a.assetId] = a.modelGlbUrl ?? (a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null)
     })
     return m
-  }, [catalog])
+  }, [mergedCatalog])
+
+  const renderStyleByAssetId = useMemo(() => {
+    const m: Record<string, RenderStyle | undefined> = {}
+    mergedCatalog.forEach((a) => {
+      m[a.assetId] = a.renderStyle ?? 'box'
+    })
+    return m
+  }, [mergedCatalog])
+
+  const onImportAssets = useCallback((assets: CatalogAsset[]) => {
+    setImportedCatalog((prev) => {
+      const map = new Map<string, CatalogAsset>()
+      for (const a of prev) map.set(a.assetId, a)
+      for (const a of assets) map.set(a.assetId, a)
+      return Array.from(map.values())
+    })
+  }, [])
 
   const onFloorPlace = useCallback(
     (point: [number, number, number]) => {
@@ -99,15 +125,17 @@ export function EditorPage() {
       </header>
       <div className="editor-body">
         <DevicePalette
-          catalog={catalog}
+          catalog={mergedCatalog}
           loadError={catalogError}
           pendingPlacement={pendingPlacement}
           onSetPendingPlacement={setPendingPlacement}
+          onImportAssets={onImportAssets}
         />
         <div className="editor-center">
           <main className="editor-canvas-wrap">
             <EditorCanvas
-              modelGlbByAssetId={modelGlbByAssetId}
+              modelUrlByAssetId={modelGlbByAssetId}
+              renderStyleByAssetId={renderStyleByAssetId}
               floorPlacementActive={!!pendingPlacement}
               onFloorPlace={onFloorPlace}
             />

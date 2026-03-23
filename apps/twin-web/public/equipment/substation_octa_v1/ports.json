@@ -1,0 +1,19 @@
+{
+  "ports": [
+    {
+      "id": "cdw_in",
+      "name": "变电站输入",
+      "position": [-0.42, 0.0, 0.0],
+      "system": "CDW",
+      "direction": "in"
+    },
+    {
+      "id": "chw_out",
+      "name": "变电站输出",
+      "position": [0.42, 0.0, 0.0],
+      "system": "CHW",
+      "direction": "out"
+    }
+  ]
+}
+

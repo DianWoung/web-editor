@@ -8,17 +8,28 @@ import { useSceneStore } from '@/store/sceneStore'
 import { eulerDegToThreeEuler, eulerThreeToDegTuple } from '@/utils/degrees'
 import { PortMarker } from '@/components/scene/PortMarker'
 import { sceneTheme } from '@/theme/sceneTheme'
+import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 
 type Props = {
   device: Device
   ports: PortDef[]
-  modelGlb: boolean
+  /** GLB 资源 URL；为空时走占位几何渲染 */
+  modelUrl?: string | null
+  /** 占位多面体渲染风格 */
+  renderStyle?: RenderStyle
   /** editor：编排交互；viewer：总览只读，点击进详情 */
   mode?: 'editor' | 'viewer'
   onOpenDevice?: (deviceId: string) => void
 }
 
-export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpenDevice }: Props) {
+export function DeviceInstance({
+  device,
+  ports,
+  modelUrl,
+  renderStyle = 'box',
+  mode = 'editor',
+  onOpenDevice,
+}: Props) {
   const groupRef = useRef<Group>(null)
   const [tcObject, setTcObject] = useState<Group | null>(null)
   const draggingRef = useRef(false)
@@ -41,11 +52,11 @@ export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpe
   }
 
   useEffect(() => {
-    if (!modelGlb) return
+    if (!modelUrl) return
     const loader = new GLTFLoader()
     let cancelled = false
     loader.load(
-      `/equipment/${device.assetId}/model.glb`,
+      modelUrl,
       (gltf) => {
         if (cancelled) return
         setGlbScene(gltf.scene.clone(true))
@@ -68,7 +79,7 @@ export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpe
       setGlbScene(null)
       setGlbFailed(false)
     }
-  }, [device.assetId, device.id, mode, modelGlb, setError])
+  }, [device.assetId, device.id, mode, modelUrl, setError])
 
   useLayoutEffect(() => {
     const g = groupRef.current
@@ -110,11 +121,25 @@ export function DeviceInstance({ device, ports, modelGlb, mode = 'editor', onOpe
   return (
     <group>
       <group ref={bindGroupRef} onClick={handleGroupClick}>
-        {modelGlb && glbScene && !glbFailed ? (
+        {modelUrl && glbScene && !glbFailed ? (
           <primitive object={glbScene} />
         ) : (
-          <mesh castShadow receiveShadow>
-            <boxGeometry args={[hx * 2, hy * 2, hz * 2]} />
+          <mesh
+            castShadow
+            receiveShadow
+            scale={renderStyle === 'box' ? [1, 1, 1] : [hx * 2, hy * 2, hz * 2]}
+          >
+            {renderStyle === 'box' ? (
+              <boxGeometry args={[hx * 2, hy * 2, hz * 2]} />
+            ) : renderStyle === 'icosahedron' ? (
+              <icosahedronGeometry args={[1, 0]} />
+            ) : renderStyle === 'dodecahedron' ? (
+              <dodecahedronGeometry args={[1, 0]} />
+            ) : renderStyle === 'octahedron' ? (
+              <octahedronGeometry args={[1, 0]} />
+            ) : (
+              <boxGeometry args={[1, 1, 1]} />
+            )}
             <meshStandardMaterial
               color={baseColor}
               emissive={emissiveColor}
