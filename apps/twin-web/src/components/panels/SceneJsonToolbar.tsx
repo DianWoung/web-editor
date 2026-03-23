@@ -17,6 +17,7 @@ export function SceneJsonToolbar() {
   const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
   const clearError = useSceneStore((s) => s.clearError)
   const clearScene = useSceneStore((s) => s.clearScene)
+  const requestEditorCameraReset = useSceneStore((s) => s.requestEditorCameraReset)
 
   const download = () => {
     const text = exportSceneJson()
@@ -86,6 +87,9 @@ export function SceneJsonToolbar() {
             <option value={1}>1 m</option>
           </select>
         </label>
+        <button type="button" className="secondary" title="与首次进入时相同的俯视角度（快捷键 Home）" onClick={() => requestEditorCameraReset()}>
+          重置视角
+        </button>
       </div>
       {lastError ? (
         <div className="toolbar-error">

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
@@ -6,6 +7,26 @@ import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
+
+function EditorOrbitControls() {
+  /** drei 使用 three-stdlib 的 OrbitControls，与 @types/three 示例路径类型不兼容，仅依赖 reset() */
+  const ref = useRef<{ reset: () => void } | null>(null)
+  const nonce = useSceneStore((s) => s.editorUi.cameraResetNonce)
+  useEffect(() => {
+    if (nonce === 0) return
+    ref.current?.reset()
+  }, [nonce])
+  return (
+    <OrbitControls
+      // drei 绑定 three-stdlib 控制器，与 @types/three 的 OrbitControls 声明不一致
+      ref={ref as never}
+      makeDefault
+      minDistance={4}
+      maxDistance={80}
+      maxPolarAngle={Math.PI * 0.49}
+    />
+  )
+}
 
 type Props = {
   modelGlbByAssetId: Record<string, boolean>
@@ -25,6 +46,7 @@ export function EditorCanvas({
   const selection = useSceneStore((s) => s.selection)
   const showGrid = useSceneStore((s) => s.editorUi.showGrid)
   const showPipes = useSceneStore((s) => s.editorUi.showPipes)
+  const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
   const setSelection = useSceneStore((s) => s.setSelection)
 
   const selectedPipeId = selection?.kind === 'pipe' ? selection.pipeId : null
@@ -46,7 +68,10 @@ export function EditorCanvas({
         width: '100%',
         height: '100%',
         background: sceneTheme.background,
-        cursor: floorPlacementActive ? 'crosshair' : undefined,
+        cursor: floorPlacementActive || wireFrom ? 'crosshair' : undefined,
+      }}
+      onCreated={({ gl }) => {
+        gl.domElement.style.touchAction = 'none'
       }}
     >
       <color attach="background" args={[sceneTheme.background]} />
@@ -75,7 +100,7 @@ export function EditorCanvas({
         shadow-normalBias={0.03}
         shadow-radius={9}
       />
-      <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
+      <EditorOrbitControls />
       <RoomFloor showGrid={showGrid} onFloorClick={floorPlacementActive ? onFloorPlace : undefined} />
       {devices.map((d) => {
         const pg = portGroups.find((g) => g.deviceId === d.id)

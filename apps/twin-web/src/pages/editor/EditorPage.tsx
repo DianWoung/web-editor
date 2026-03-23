@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EditorCanvas } from '@/components/scene/EditorCanvas'
 import { DevicePalette } from '@/components/panels/DevicePalette'
+import { EditorCanvasHud } from '@/components/panels/EditorCanvasHud'
 import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
@@ -13,7 +14,6 @@ export function EditorPage() {
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
-
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -80,6 +80,10 @@ export function EditorPage() {
         if (sel?.kind === 'device') st.removeDevice(sel.deviceId)
         else if (sel?.kind === 'pipe') st.removePipe(sel.pipeId)
       }
+      if (e.key === 'Home') {
+        e.preventDefault()
+        useSceneStore.getState().requestEditorCameraReset()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -89,7 +93,9 @@ export function EditorPage() {
     <div className="editor-root">
       <header className="editor-header">
         <h1>场景编排</h1>
-        <p className="muted small">内部工具 · 设备库与管线 JSON · Esc 取消 · Delete 删除选中</p>
+        <p className="muted small">
+          内部工具 · Esc 取消 · Delete 删除 · Home 重置视角
+        </p>
       </header>
       <div className="editor-body">
         <DevicePalette
@@ -105,6 +111,7 @@ export function EditorPage() {
               floorPlacementActive={!!pendingPlacement}
               onFloorPlace={onFloorPlace}
             />
+            <EditorCanvasHud />
           </main>
           <EditorDeck />
         </div>

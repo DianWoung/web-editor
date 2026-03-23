@@ -30,6 +30,8 @@ type SceneState = {
     showGrid: boolean
     showPipes: boolean
     snapGrid: SnapGridOption
+    /** 递增以触发编排画布 OrbitControls.reset（初始 0 不触发） */
+    cameraResetNonce: number
   }
 }
 
@@ -42,6 +44,7 @@ type SceneActions = {
   setShowGrid: (v: boolean) => void
   setShowPipes: (v: boolean) => void
   setSnapGrid: (g: SnapGridOption) => void
+  requestEditorCameraReset: () => void
   loadScene: (scene: SceneFile) => void
   clearScene: () => void
   addDeviceFromAsset: (asset: CatalogAsset, position?: [number, number, number]) => void
@@ -76,6 +79,7 @@ const editorUiDefaults = {
   showGrid: true,
   showPipes: true,
   snapGrid: 0 as SnapGridOption,
+  cameraResetNonce: 0,
 }
 
 const initial: SceneState = {
@@ -102,6 +106,10 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
   setShowGrid: (showGrid) => set((s) => ({ editorUi: { ...s.editorUi, showGrid } })),
   setShowPipes: (showPipes) => set((s) => ({ editorUi: { ...s.editorUi, showPipes } })),
   setSnapGrid: (snapGrid) => set((s) => ({ editorUi: { ...s.editorUi, snapGrid } })),
+  requestEditorCameraReset: () =>
+    set((s) => ({
+      editorUi: { ...s.editorUi, cameraResetNonce: s.editorUi.cameraResetNonce + 1 },
+    })),
 
   loadScene: (scene) =>
     set({
@@ -234,6 +242,15 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     const fromRef = `${a.deviceId}.${a.portId}`
     const toRef = `${b.deviceId}.${b.portId}`
 
+    const dup = get().pipes.some(
+      (p) =>
+        (p.from === fromRef && p.to === toRef) || (p.from === toRef && p.to === fromRef),
+    )
+    if (dup) {
+      get().setError('该两端口之间已有管线，未重复添加。')
+      return
+    }
+
     const system =
       pgA.ports.find((p) => p.id === a.portId)?.system ??
       pgB.ports.find((p) => p.id === b.portId)?.system ??
@@ -250,7 +267,7 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
 
     set((s) => ({
       pipes: [...s.pipes, pipe],
-      editorUi: { ...s.editorUi, wireFrom: null },
+      editorUi: { ...s.editorUi, wireFrom: null, lastError: null },
     }))
   },
 
