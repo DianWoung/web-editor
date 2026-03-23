@@ -4,8 +4,11 @@ import type { Pipe } from '@/schemas/pipe'
 import type { PortGroup } from '@/schemas/port'
 import { formatSceneParseError, parseSceneJson, type SceneFile } from '@/schemas/scene'
 import type { CatalogAsset } from '@/services/loadEquipmentCatalog'
-import { parsePipeEndpoint } from '@/services/pipeCollision'
+import { parsePipeEndpoint, pipeSegmentsCollideDevices } from '@/services/pipeCollision'
+import { buildOrthogonalRoute } from '@/services/orthogonalRoute'
+import { getPortWorldPosition } from '@/utils/portWorld'
 import { snapVec3 } from '@/utils/snap'
+import { Vector3 } from 'three'
 
 export type Selection =
   | { kind: 'device'; deviceId: string }
@@ -32,6 +35,8 @@ type SceneState = {
     snapGrid: SnapGridOption
     /** 递增以触发编排画布 OrbitControls.reset（初始 0 不触发） */
     cameraResetNonce: number
+    /** 运行态开关：让管线展示“流动”虚线效果 */
+    flowEnabled: boolean
   }
 }
 
@@ -45,6 +50,7 @@ type SceneActions = {
   setShowPipes: (v: boolean) => void
   setSnapGrid: (g: SnapGridOption) => void
   requestEditorCameraReset: () => void
+  setFlowEnabled: (v: boolean) => void
   loadScene: (scene: SceneFile) => void
   clearScene: () => void
   addDeviceFromAsset: (asset: CatalogAsset, position?: [number, number, number]) => void
@@ -80,6 +86,7 @@ const editorUiDefaults = {
   showPipes: true,
   snapGrid: 0 as SnapGridOption,
   cameraResetNonce: 0,
+  flowEnabled: false,
 }
 
 const initial: SceneState = {
@@ -110,6 +117,7 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     set((s) => ({
       editorUi: { ...s.editorUi, cameraResetNonce: s.editorUi.cameraResetNonce + 1 },
     })),
+  setFlowEnabled: (flowEnabled) => set((s) => ({ editorUi: { ...s.editorUi, flowEnabled } })),
 
   loadScene: (scene) =>
     set({
@@ -255,6 +263,23 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       pgA.ports.find((p) => p.id === a.portId)?.system ??
       pgB.ports.find((p) => p.id === b.portId)?.system ??
       devA.system
+
+    // 策略：冲突时禁止连线（不清空 wireFrom，方便用户换端口重试）
+    const portA = pgA.ports.find((p) => p.id === a.portId)
+    const portB = pgB.ports.find((p) => p.id === b.portId)
+    if (!portA || !portB) return
+
+    const wa = new Vector3()
+    const wb = new Vector3()
+    getPortWorldPosition(devA, portA, wa)
+    getPortWorldPosition(devB, portB, wb)
+    const pts = buildOrthogonalRoute(wa, wb)
+    const exclude = new Set<string>([a.deviceId, b.deviceId])
+    const conflict = pipeSegmentsCollideDevices(pts, get().devices, exclude)
+    if (conflict) {
+      get().setError('该连接会与设备包围盒冲突，已阻止生成管线。')
+      return
+    }
 
     const pipe: Pipe = {
       id: newPipeId(),

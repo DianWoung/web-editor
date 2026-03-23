@@ -46,6 +46,7 @@ export function EditorCanvas({
   const selection = useSceneStore((s) => s.selection)
   const showGrid = useSceneStore((s) => s.editorUi.showGrid)
   const showPipes = useSceneStore((s) => s.editorUi.showPipes)
+  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
   const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
   const setSelection = useSceneStore((s) => s.setSelection)
 
@@ -123,6 +124,7 @@ export function EditorCanvas({
               portGroups={portGroups}
               editorInteractive
               selected={p.id === selectedPipeId}
+              flowEnabled={flowEnabled}
               onSelectPipe={(id) => setSelection({ kind: 'pipe', pipeId: id })}
             />
           ))

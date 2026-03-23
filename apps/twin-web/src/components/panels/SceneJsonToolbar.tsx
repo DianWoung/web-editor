@@ -12,9 +12,11 @@ export function SceneJsonToolbar() {
   const showGrid = useSceneStore((s) => s.editorUi.showGrid)
   const showPipes = useSceneStore((s) => s.editorUi.showPipes)
   const snapGrid = useSceneStore((s) => s.editorUi.snapGrid)
+  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
   const setShowGrid = useSceneStore((s) => s.setShowGrid)
   const setShowPipes = useSceneStore((s) => s.setShowPipes)
   const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
+  const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
   const clearError = useSceneStore((s) => s.clearError)
   const clearScene = useSceneStore((s) => s.clearScene)
   const requestEditorCameraReset = useSceneStore((s) => s.requestEditorCameraReset)
@@ -73,6 +75,10 @@ export function SceneJsonToolbar() {
         <label className="toolbar-toggle">
           <input type="checkbox" checked={showPipes} onChange={(e) => setShowPipes(e.target.checked)} />
           <span>显示管线</span>
+        </label>
+        <label className="toolbar-toggle">
+          <input type="checkbox" checked={flowEnabled} onChange={(e) => setFlowEnabled(e.target.checked)} />
+          <span>运行态：流动</span>
         </label>
         <label className="toolbar-snap">
           <span className="toolbar-snap-label">吸附</span>

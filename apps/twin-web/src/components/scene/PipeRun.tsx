@@ -1,6 +1,7 @@
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { Quaternion, Vector3 } from 'three'
+import { useFrame } from '@react-three/fiber'
+import { Color, Quaternion, ShaderMaterial, Vector3 } from 'three'
 import type { Pipe } from '@/schemas/pipe'
 import type { Device } from '@/schemas/device'
 import type { PortGroup } from '@/schemas/port'
@@ -16,6 +17,8 @@ type Props = {
   pipe: Pipe
   devices: Device[]
   portGroups: PortGroup[]
+  /** 运行态：流动虚线效果（仅直管段） */
+  flowEnabled?: boolean
   /** 编排页可点选管线 */
   editorInteractive?: boolean
   selected?: boolean
@@ -42,6 +45,7 @@ export function PipeRun({
   pipe,
   devices,
   portGroups,
+  flowEnabled = false,
   editorInteractive,
   selected,
   onSelectPipe,
@@ -67,6 +71,84 @@ export function PipeRun({
 
   const { points, conflict, colorHex } = layout
 
+  const flowMaterial = useMemo(() => {
+    if (!flowEnabled) return null
+
+    const baseColor = new Color(colorHex)
+    const glowColor =
+      selected && !conflict ? new Color('#2a8faf') : conflict ? new Color(sceneTheme.pipeConflict) : baseColor
+    const glowStrength = selected && !conflict ? 1.15 : conflict ? 1.0 : 0.65
+
+    const mat = new ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uBaseColor: { value: baseColor },
+        uGlowColor: { value: glowColor },
+        uGlowStrength: { value: glowStrength },
+        uSpeed: { value: 0.85 },
+        uDashCount: { value: 9 },
+        uDashWidth: { value: 0.28 },
+        uDashSoft: { value: 0.08 },
+        uLightDir: { value: new Vector3(0.3, 1.0, 0.2).normalize() },
+      },
+      vertexShader: `
+        varying vec2 vUv;
+        varying vec3 vNormalW;
+        void main() {
+          vUv = uv;
+          vNormalW = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uBaseColor;
+        uniform vec3 uGlowColor;
+        uniform float uGlowStrength;
+        uniform float uSpeed;
+        uniform float uDashCount;
+        uniform float uDashWidth;
+        uniform float uDashSoft;
+        uniform vec3 uLightDir;
+        varying vec2 vUv;
+        varying vec3 vNormalW;
+
+        void main() {
+          float t = fract((vUv.y + uTime * uSpeed) * uDashCount);
+          float on = 1.0 - smoothstep(uDashWidth, uDashWidth + uDashSoft, t);
+
+          float diff = max(dot(vNormalW, normalize(uLightDir)), 0.0);
+          vec3 base = uBaseColor * (0.22 + diff * 0.78);
+          vec3 glow = uGlowColor * on * uGlowStrength;
+          vec3 col = base + glow;
+
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `,
+    })
+
+    return mat
+  }, [colorHex, conflict, flowEnabled, selected])
+
+  const flowMaterialRef = useRef<ShaderMaterial | null>(null)
+
+  useEffect(() => {
+    flowMaterialRef.current = flowMaterial
+  }, [flowMaterial])
+
+  useEffect(() => {
+    return () => {
+      flowMaterial?.dispose()
+    }
+  }, [flowMaterial])
+
+  useFrame((state) => {
+    if (!flowEnabled) return
+    const mat = flowMaterialRef.current
+    if (!mat) return
+    mat.uniforms.uTime.value = state.clock.elapsedTime
+  })
+
   const segments = useMemo(() => {
     if (points.length < 2) return null
     const out: ReactNode[] = []
@@ -88,13 +170,17 @@ export function PipeRun({
       out.push(
         <mesh key={`seg-${pipe.id}-${i}`} position={mid} quaternion={q} scale={[1, len, 1]} castShadow>
           <cylinderGeometry args={[0.06, 0.06, 1, 12]} />
-          <meshStandardMaterial
-            color={colorHex}
-            emissive={selEmissive}
-            emissiveIntensity={selEmissiveInt}
-            metalness={0.25}
-            roughness={0.45}
-          />
+          {flowMaterial ? (
+            <primitive object={flowMaterial} attach="material" />
+          ) : (
+            <meshStandardMaterial
+              color={colorHex}
+              emissive={selEmissive}
+              emissiveIntensity={selEmissiveInt}
+              metalness={0.25}
+              roughness={0.45}
+            />
+          )}
         </mesh>,
       )
     }
@@ -116,7 +202,7 @@ export function PipeRun({
     }
 
     return out
-  }, [colorHex, conflict, pipe.id, points, selected])
+  }, [colorHex, conflict, pipe.id, points, selected, flowMaterial])
 
   if (!segments) return null
 
