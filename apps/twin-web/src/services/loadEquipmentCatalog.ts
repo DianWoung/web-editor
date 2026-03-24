@@ -48,79 +48,54 @@ export type CatalogAsset = {
   portsTemplate: PortDef[]
 }
 
+function mapCatalogAsset(
+  asset: z.infer<typeof assetJsonSchema>,
+  ports: z.infer<typeof portsFileSchema>,
+): CatalogAsset {
+  return {
+    assetVersion: asset.assetVersion,
+    assetId: asset.assetId,
+    displayName: asset.displayName,
+    type: asset.type,
+    defaultSystem: asset.defaultSystem,
+    halfExtents: asset.bounds.halfExtents,
+    modelGlb: asset.modelGlb ?? false,
+    modelGlbUrl: asset.modelGlb ? `/equipment/${asset.assetId}/model.glb` : null,
+    renderStyle: asset.renderStyle ?? 'box',
+    portsTemplate: ports.ports.map((port) => ({
+      id: port.id,
+      name: port.name,
+      position: port.position,
+      system: port.system,
+      direction: port.direction,
+    })),
+  }
+}
+
+async function loadEquipmentAsset(assetId: string): Promise<CatalogAsset> {
+  const [assetRes, portsRes] = await Promise.all([
+    fetch(`/equipment/${assetId}/asset.json`),
+    fetch(`/equipment/${assetId}/ports.json`),
+  ])
+  if (!assetRes.ok) throw new Error(`加载 asset 失败 ${assetId}: ${assetRes.status}`)
+  if (!portsRes.ok) throw new Error(`加载 ports 失败 ${assetId}: ${portsRes.status}`)
+
+  const assetJson: unknown = await assetRes.json()
+  const portsJson: unknown = await portsRes.json()
+  const asset = assetJsonSchema.parse(assetJson)
+  const ports = portsFileSchema.parse(portsJson)
+  return mapCatalogAsset(asset, ports)
+}
+
 export async function loadEquipmentCatalog(): Promise<CatalogAsset[]> {
   const catRes = await fetch('/equipment/catalog.json')
   if (!catRes.ok) throw new Error(`加载 catalog 失败: ${catRes.status}`)
   const catJson: unknown = await catRes.json()
   const cat = catalogSchema.parse(catJson)
-
-  const out: CatalogAsset[] = []
-  for (const assetId of cat.assets) {
-    const [aRes, pRes] = await Promise.all([
-      fetch(`/equipment/${assetId}/asset.json`),
-      fetch(`/equipment/${assetId}/ports.json`),
-    ])
-    if (!aRes.ok) throw new Error(`加载 asset 失败 ${assetId}: ${aRes.status}`)
-    if (!pRes.ok) throw new Error(`加载 ports 失败 ${assetId}: ${pRes.status}`)
-    const aJson: unknown = await aRes.json()
-    const pJson: unknown = await pRes.json()
-    const a = assetJsonSchema.parse(aJson)
-    const p = portsFileSchema.parse(pJson)
-    out.push({
-      assetVersion: a.assetVersion,
-      assetId: a.assetId,
-      displayName: a.displayName,
-      type: a.type,
-      defaultSystem: a.defaultSystem,
-      halfExtents: a.bounds.halfExtents,
-      modelGlb: a.modelGlb ?? false,
-      modelGlbUrl: a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null,
-      renderStyle: a.renderStyle ?? 'box',
-      portsTemplate: p.ports.map((x) => ({
-        id: x.id,
-        name: x.name,
-        position: x.position,
-        system: x.system,
-        direction: x.direction,
-      })),
-    })
-  }
-  return out
+  return Promise.all(cat.assets.map((assetId) => loadEquipmentAsset(assetId)))
 }
 
 export async function loadEquipmentAssetsByIds(assetIds: string[]): Promise<CatalogAsset[]> {
   const uniq = Array.from(new Set(assetIds))
-  const out: CatalogAsset[] = []
-  for (const assetId of uniq) {
-    const [aRes, pRes] = await Promise.all([
-      fetch(`/equipment/${assetId}/asset.json`),
-      fetch(`/equipment/${assetId}/ports.json`),
-    ])
-    if (!aRes.ok) throw new Error(`加载 asset 失败 ${assetId}: ${aRes.status}`)
-    if (!pRes.ok) throw new Error(`加载 ports 失败 ${assetId}: ${pRes.status}`)
-    const aJson: unknown = await aRes.json()
-    const pJson: unknown = await pRes.json()
-    const a = assetJsonSchema.parse(aJson)
-    const p = portsFileSchema.parse(pJson)
-
-    out.push({
-      assetVersion: a.assetVersion,
-      assetId: a.assetId,
-      displayName: a.displayName,
-      type: a.type,
-      defaultSystem: a.defaultSystem,
-      halfExtents: a.bounds.halfExtents,
-      modelGlb: a.modelGlb ?? false,
-      modelGlbUrl: a.modelGlb ? `/equipment/${a.assetId}/model.glb` : null,
-      renderStyle: a.renderStyle ?? 'box',
-      portsTemplate: p.ports.map((x) => ({
-        id: x.id,
-        name: x.name,
-        position: x.position,
-        system: x.system,
-        direction: x.direction,
-      })),
-    })
-  }
-  return out
+  return Promise.all(uniq.map((assetId) => loadEquipmentAsset(assetId)))
 }

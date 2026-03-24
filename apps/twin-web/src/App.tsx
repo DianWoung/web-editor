@@ -1,15 +1,30 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AppNav } from '@/components/layout/AppNav'
-import { DeviceDetailPage } from '@/pages/detail/DeviceDetailPage'
-import { EditorPage } from '@/pages/editor/EditorPage'
-import { OverviewPage } from '@/pages/overview/OverviewPage'
+
+const OverviewPage = lazy(async () => {
+  const mod = await import('@/pages/overview/OverviewPage')
+  return { default: mod.OverviewPage }
+})
+
+const DeviceDetailPage = lazy(async () => {
+  const mod = await import('@/pages/detail/DeviceDetailPage')
+  return { default: mod.DeviceDetailPage }
+})
+
+const EditorPage = lazy(async () => {
+  const mod = await import('@/pages/editor/EditorPage')
+  return { default: mod.EditorPage }
+})
 
 function AppShell() {
   return (
     <div className="app-shell">
       <AppNav />
       <div className="app-shell-body">
-        <Outlet />
+        <Suspense fallback={null}>
+          <Outlet />
+        </Suspense>
       </div>
     </div>
   )

@@ -1,8 +1,12 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { TrendChart } from '@/components/charts/TrendChart'
 import { getMockDeviceRuntime } from '@/services/mockDeviceRuntime'
 import { useSceneStore } from '@/store/sceneStore'
+
+const TrendChart = lazy(async () => {
+  const mod = await import('@/components/charts/TrendChart')
+  return { default: mod.TrendChart }
+})
 
 export function DeviceDetailPage() {
   const { deviceId: rawId } = useParams<{ deviceId: string }>()
@@ -66,7 +70,9 @@ export function DeviceDetailPage() {
 
         <section className="detail-card detail-card--wide">
           <h2>趋势（近 24h，Mock）</h2>
-          <TrendChart data={runtime.trend} seriesName={runtime.points[0]?.name ?? '趋势'} />
+          <Suspense fallback={<div className="trend-chart" />}>
+            <TrendChart data={runtime.trend} seriesName={runtime.points[0]?.name ?? '趋势'} />
+          </Suspense>
         </section>
 
         <section className="detail-card">
