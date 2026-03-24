@@ -9,6 +9,7 @@ import { eulerDegToThreeEuler, eulerThreeToDegTuple } from '@/utils/degrees'
 import { PortMarker } from '@/components/scene/PortMarker'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
+import { applyGltfScenePerformanceDefaults } from '@/utils/gltfPerformance'
 
 type Props = {
   device: Device
@@ -59,7 +60,9 @@ export function DeviceInstance({
       modelUrl,
       (gltf) => {
         if (cancelled) return
-        setGlbScene(gltf.scene.clone(true))
+        const scene = gltf.scene.clone(true)
+        applyGltfScenePerformanceDefaults(scene)
+        setGlbScene(scene)
         setGlbFailed(false)
       },
       undefined,

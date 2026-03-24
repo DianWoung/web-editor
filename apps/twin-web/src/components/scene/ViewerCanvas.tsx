@@ -8,6 +8,7 @@ import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
+import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
 
 type Props = {
   modelUrlByAssetId: Record<string, string | null | undefined>
@@ -28,13 +29,15 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId }: Props)
     <Canvas
       shadows
       gl={{
-        antialias: true,
+        antialias: typeof window !== 'undefined' ? window.devicePixelRatio <= 2 : true,
+        powerPreference: 'low-power',
         outputColorSpace: SRGBColorSpace,
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
       }}
       camera={{ position: [14, 11, 14], fov: 45, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%', background: sceneTheme.background }}
+      onCreated={({ gl }) => configureTwinWebRenderer(gl)}
     >
       <color attach="background" args={[sceneTheme.background]} />
       <ambientLight color={sceneTheme.ambientColor} intensity={sceneTheme.ambientIntensity} />

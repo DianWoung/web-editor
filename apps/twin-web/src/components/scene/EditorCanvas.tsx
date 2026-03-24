@@ -8,6 +8,7 @@ import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
+import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
 
 function EditorOrbitControls() {
   /** drei 使用 three-stdlib 的 OrbitControls，与 @types/three 示例路径类型不兼容，仅依赖 reset() */
@@ -59,7 +60,8 @@ export function EditorCanvas({
     <Canvas
       shadows
       gl={{
-        antialias: true,
+        antialias: typeof window !== 'undefined' ? window.devicePixelRatio <= 2 : true,
+        powerPreference: 'low-power',
         outputColorSpace: SRGBColorSpace,
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
@@ -74,9 +76,7 @@ export function EditorCanvas({
         background: sceneTheme.background,
         cursor: floorPlacementActive || wireFrom ? 'crosshair' : undefined,
       }}
-      onCreated={({ gl }) => {
-        gl.domElement.style.touchAction = 'none'
-      }}
+      onCreated={({ gl }) => configureTwinWebRenderer(gl)}
     >
       <color attach="background" args={[sceneTheme.background]} />
       <ambientLight color={sceneTheme.ambientColor} intensity={sceneTheme.ambientIntensity} />

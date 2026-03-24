@@ -8,6 +8,6 @@
     "halfExtents": [1.2, 0.45, 0.8]
   },
   "renderStyle": "dodecahedron",
-  "modelGlb": false
+  "modelGlb": true
 }
 
