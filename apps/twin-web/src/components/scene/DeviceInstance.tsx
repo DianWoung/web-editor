@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { TransformControls } from '@react-three/drei'
+import { Billboard, Text, TransformControls } from '@react-three/drei'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { Box3 } from 'three'
 import type { Group } from 'three'
 import type { Device } from '@/schemas/device'
 import type { PortDef } from '@/schemas/port'
@@ -32,6 +33,7 @@ export function DeviceInstance({
   onOpenDevice,
 }: Props) {
   const groupRef = useRef<Group>(null)
+  const modelVisualRef = useRef<Group>(null)
   const [tcObject, setTcObject] = useState<Group | null>(null)
   const draggingRef = useRef(false)
   const [glbScene, setGlbScene] = useState<Group | null>(null)
@@ -93,6 +95,21 @@ export function DeviceInstance({
   }, [device.position, device.rotation])
 
   const [hx, hy, hz] = device.boundsHalfExtents
+  const [modelTopY, setModelTopY] = useState(hy)
+
+  useLayoutEffect(() => {
+    const visual = modelVisualRef.current
+    if (!visual) {
+      setModelTopY(hy)
+      return
+    }
+    const box = new Box3().setFromObject(visual)
+    setModelTopY(box.isEmpty() ? hy : box.max.y)
+  }, [glbScene, glbFailed, modelUrl, hx, hy, hz, renderStyle])
+
+  const labelFontSize = Math.min(0.18 + Math.max(hx, hz) * 0.04, 0.32)
+  /** 包围盒顶面正上方：文字 anchorY=bottom，故 Y 为字形底缘，紧贴模型顶留一小缝 */
+  const labelY = modelTopY + labelFontSize * 0.52 + 0.05
   const baseColor = isDeviceSelected ? sceneTheme.deviceSelected : sceneTheme.deviceIdle
   const emissiveColor = isDeviceSelected ? sceneTheme.deviceSelectedEmissive : sceneTheme.deviceIdleEmissive
   const emissiveIntensity = isDeviceSelected
@@ -124,34 +141,36 @@ export function DeviceInstance({
   return (
     <group>
       <group ref={bindGroupRef} onClick={handleGroupClick}>
-        {modelUrl && glbScene && !glbFailed ? (
-          <primitive object={glbScene} />
-        ) : (
-          <mesh
-            castShadow
-            receiveShadow
-            scale={renderStyle === 'box' ? [1, 1, 1] : [hx * 2, hy * 2, hz * 2]}
-          >
-            {renderStyle === 'box' ? (
-              <boxGeometry args={[hx * 2, hy * 2, hz * 2]} />
-            ) : renderStyle === 'icosahedron' ? (
-              <icosahedronGeometry args={[1, 0]} />
-            ) : renderStyle === 'dodecahedron' ? (
-              <dodecahedronGeometry args={[1, 0]} />
-            ) : renderStyle === 'octahedron' ? (
-              <octahedronGeometry args={[1, 0]} />
-            ) : (
-              <boxGeometry args={[1, 1, 1]} />
-            )}
-            <meshStandardMaterial
-              color={baseColor}
-              emissive={emissiveColor}
-              emissiveIntensity={emissiveIntensity}
-              metalness={0.26}
-              roughness={0.52}
-            />
-          </mesh>
-        )}
+        <group ref={modelVisualRef}>
+          {modelUrl && glbScene && !glbFailed ? (
+            <primitive object={glbScene} />
+          ) : (
+            <mesh
+              castShadow
+              receiveShadow
+              scale={renderStyle === 'box' ? [1, 1, 1] : [hx * 2, hy * 2, hz * 2]}
+            >
+              {renderStyle === 'box' ? (
+                <boxGeometry args={[hx * 2, hy * 2, hz * 2]} />
+              ) : renderStyle === 'icosahedron' ? (
+                <icosahedronGeometry args={[1, 0]} />
+              ) : renderStyle === 'dodecahedron' ? (
+                <dodecahedronGeometry args={[1, 0]} />
+              ) : renderStyle === 'octahedron' ? (
+                <octahedronGeometry args={[1, 0]} />
+              ) : (
+                <boxGeometry args={[1, 1, 1]} />
+              )}
+              <meshStandardMaterial
+                color={baseColor}
+                emissive={emissiveColor}
+                emissiveIntensity={emissiveIntensity}
+                metalness={0.26}
+                roughness={0.52}
+              />
+            </mesh>
+          )}
+        </group>
         {mode === 'editor' &&
           ports.map((p) => (
             <PortMarker
@@ -162,6 +181,20 @@ export function DeviceInstance({
               onPick={() => handlePortPick(p.id)}
             />
           ))}
+        <Billboard follow position={[0, labelY, 0]}>
+          <Text
+            fontSize={labelFontSize}
+            color={sceneTheme.deviceLabelFill}
+            outlineWidth={0.02}
+            outlineColor={sceneTheme.deviceLabelOutline}
+            anchorX="center"
+            anchorY="bottom"
+            maxWidth={5}
+            textAlign="center"
+          >
+            {device.name}
+          </Text>
+        </Billboard>
       </group>
 
       {isDeviceSelected && tcObject ? (

@@ -39,6 +39,10 @@ export const sceneTheme = {
   deviceSelectedEmissive: '#45c4e8',
   deviceSelectedEmissiveIntensity: 0.32,
 
+  /** 3D 设备名称标签（Billboard 文字） */
+  deviceLabelFill: '#e8f4fc',
+  deviceLabelOutline: '#1a2433',
+
   pipeConflict: '#f87171',
   pipeConflictEmissive: '#3f2024',
 } as const
