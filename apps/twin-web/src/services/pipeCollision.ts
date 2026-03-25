@@ -10,6 +10,9 @@ const _euler = new Euler(0, 0, 0, 'XYZ')
 // Pipe geometry matches apps/twin-web/src/components/scene/PipeRun.tsx
 const PIPE_CYLINDER_RADIUS = 0.06
 const PIPE_ELBOW_SPHERE_RADIUS = 0.09
+// 设备的 mesh 往往会略超出 boundsHalfExtents 的理想盒子（尤其不同资产的 pivot/外扩）。
+// 给设备包围盒加一点“外形裕量”，避免移动后出现管线仍穿入但检测漏判。
+const DEVICE_CLEARANCE = 0.03
 
 function degToRad(d: number) {
   return (d * Math.PI) / 180
@@ -100,7 +103,7 @@ export function pipeSegmentsCollideDevices(
     .filter((d) => !excludeDeviceIds.has(d.id))
     .map((d) => {
       const b = deviceWorldAABB(d)
-      b.expandByScalar(Math.max(0, PIPE_CYLINDER_RADIUS + inflateBy))
+      b.expandByScalar(Math.max(0, PIPE_CYLINDER_RADIUS + inflateBy + DEVICE_CLEARANCE))
       return b
     })
 
@@ -108,7 +111,7 @@ export function pipeSegmentsCollideDevices(
     .filter((d) => !excludeDeviceIds.has(d.id))
     .map((d) => {
       const b = deviceWorldAABB(d)
-      b.expandByScalar(Math.max(0, PIPE_ELBOW_SPHERE_RADIUS + inflateBy))
+      b.expandByScalar(Math.max(0, PIPE_ELBOW_SPHERE_RADIUS + inflateBy + DEVICE_CLEARANCE))
       return b
     })
 
