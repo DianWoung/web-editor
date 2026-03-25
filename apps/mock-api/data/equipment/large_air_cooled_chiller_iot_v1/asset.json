@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "large_air_cooled_chiller_iot_v1",
+  "displayName": "大型风冷冷水机组",
+  "type": "chiller",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [8.8, 2.1, 2.3]
+  },
+  "modelGlb": true
+}

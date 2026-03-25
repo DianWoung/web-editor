@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "diesel_generator_iot_v1",
+  "displayName": "柴油发电机组",
+  "type": "generator",
+  "defaultSystem": "ELEC",
+  "bounds": {
+    "halfExtents": [5.8, 3.1, 2.0]
+  },
+  "modelGlb": true
+}

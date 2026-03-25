@@ -2,120 +2,67 @@
   "version": 1,
   "devices": [
     {
-      "id": "CHWP-01",
-      "type": "pump",
-      "name": "1#冷冻泵",
-      "assetId": "chw_pump_v1",
-      "position": [
-        0.8,
-        0.4,
-        4.6
-      ],
-      "rotation": [
-        0,
-        25,
-        0
-      ],
-      "system": "CHWP",
-      "tags": [
-        "main_equipment"
-      ],
-      "boundsHalfExtents": [
-        0.4,
-        0.4,
-        0.4
-      ]
-    },
-    {
       "id": "CH-01",
       "type": "chiller",
-      "name": "1#离心机组",
-      "assetId": "chiller_centrifugal_v1",
-      "position": [
-        5.5,
-        1.5,
-        4.6
-      ],
-      "rotation": [
-        0,
-        -15,
-        0
-      ],
+      "name": "大型风冷冷水机组",
+      "assetId": "large_air_cooled_chiller_iot_v1",
+      "position": [0, 2.1, 0],
+      "rotation": [0, 0, 0],
       "system": "CHW",
-      "tags": [
-        "main_equipment"
-      ],
-      "boundsHalfExtents": [
-        1.2,
-        1.5,
-        2.5
-      ]
+      "tags": ["main_equipment"],
+      "boundsHalfExtents": [8.8, 2.1, 2.3]
+    },
+    {
+      "id": "DG-01",
+      "type": "generator",
+      "name": "柴油发电机组",
+      "assetId": "diesel_generator_iot_v1",
+      "position": [12, 3.1, 0],
+      "rotation": [0, 0, 0],
+      "system": "ELEC",
+      "tags": ["main_equipment"],
+      "boundsHalfExtents": [5.8, 3.1, 2.0]
     }
   ],
   "portGroups": [
-    {
-      "deviceId": "CHWP-01",
-      "ports": [
-        {
-          "id": "in",
-          "name": "入口",
-          "position": [
-            -0.35,
-            0,
-            0
-          ],
-          "system": "CHWP",
-          "direction": "in"
-        },
-        {
-          "id": "out",
-          "name": "出口",
-          "position": [
-            0.35,
-            0,
-            0
-          ],
-          "system": "CHWP",
-          "direction": "out"
-        }
-      ]
-    },
     {
       "deviceId": "CH-01",
       "ports": [
         {
           "id": "chw_in",
           "name": "冷冻回水入口",
-          "position": [
-            -1.5,
-            0.2,
-            0
-          ],
+          "position": [-1.0, 0.95, -3.02],
           "system": "CHW",
           "direction": "in"
         },
         {
           "id": "chw_out",
           "name": "冷冻供水出口",
-          "position": [
-            1.5,
-            0.2,
-            0
-          ],
+          "position": [1.0, 0.95, -3.02],
           "system": "CHW",
           "direction": "out"
         }
       ]
+    },
+    {
+      "deviceId": "DG-01",
+      "ports": [
+        {
+          "id": "elec_out",
+          "name": "发电输出",
+          "position": [-5.1, 1.2, -1.78],
+          "system": "ELEC",
+          "direction": "out"
+        },
+        {
+          "id": "ctrl_in",
+          "name": "控制输入",
+          "position": [-4.8, 2.0, -1.78],
+          "system": "CTRL",
+          "direction": "in"
+        }
+      ]
     }
   ],
-  "pipes": [
-    {
-      "id": "PIPE-DEMO-001",
-      "from": "CHWP-01.out",
-      "to": "CH-01.chw_in",
-      "system": "CHW",
-      "routeType": "orthogonal",
-      "level": "main"
-    }
-  ]
+  "pipes": []
 }

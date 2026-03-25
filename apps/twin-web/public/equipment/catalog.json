@@ -1,9 +1,6 @@
 {
   "assets": [
-    "chiller_centrifugal_v1",
-    "chw_pump_v1",
-    "aircon_main_icosa_v1",
-    "aircon_main_dodeca_v1",
-    "substation_octa_v1"
+    "large_air_cooled_chiller_iot_v1",
+    "diesel_generator_iot_v1"
   ]
 }
