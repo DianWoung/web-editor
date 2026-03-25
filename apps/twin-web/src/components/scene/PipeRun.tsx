@@ -10,6 +10,7 @@ import { buildOrthogonalRoute } from '@/services/orthogonalRoute'
 import { parsePipeEndpoint, pipeSegmentsCollideDevices } from '@/services/pipeCollision'
 import { getPortWorldPosition } from '@/utils/portWorld'
 import { sceneTheme } from '@/theme/sceneTheme'
+import { TRUNK_Y } from '@/constants/trunk'
 
 const _axis = new Vector3(0, 1, 0)
 
@@ -58,13 +59,32 @@ export function PipeRun({
     if (!okA || !okB) {
       return { points: [] as Vector3[], conflict: false, colorHex: systemColor(pipe.system) }
     }
-    const pts = buildOrthogonalRoute(a, b)
     const pa = parsePipeEndpoint(pipe.from)
     const pb = parsePipeEndpoint(pipe.to)
     const exclude = new Set<string>()
     if (pa) exclude.add(pa.deviceId)
     if (pb) exclude.add(pb.deviceId)
-    const conflict = pipeSegmentsCollideDevices(pts, devices, exclude)
+
+    // 1) 用更保守的 AABB 膨胀，减少“轴线穿过但圆柱仍插入”的假阴性。
+    // 2) 若仍检测到冲突，尝试把主管标高 trunkY 向上抬高，最多 +2.0m（按你的选择 2）。
+    const PIPE_COLLISION_INFLATE = 0.1
+    const MAX_TRUNK_RAISE = 2.0
+    const TRUNK_RAISE_STEP = 0.5
+
+    const candidates: number[] = []
+    for (let k = 0; k <= MAX_TRUNK_RAISE / TRUNK_RAISE_STEP; k++) {
+      candidates.push(TRUNK_Y + k * TRUNK_RAISE_STEP)
+    }
+
+    let pts = buildOrthogonalRoute(a, b, TRUNK_Y)
+    let conflict = true
+    for (const trunkY of candidates) {
+      const nextPts = buildOrthogonalRoute(a, b, trunkY)
+      const nextConflict = pipeSegmentsCollideDevices(nextPts, devices, exclude, PIPE_COLLISION_INFLATE)
+      pts = nextPts
+      conflict = nextConflict
+      if (!conflict) break
+    }
     const colorHex = conflict ? sceneTheme.pipeConflict : systemColor(pipe.system)
     return { points: pts, conflict, colorHex }
   }, [devices, portGroups, pipe])

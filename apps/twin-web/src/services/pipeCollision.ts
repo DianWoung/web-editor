@@ -81,11 +81,16 @@ export function pipeSegmentsCollideDevices(
   points: Vector3[],
   devices: Device[],
   excludeDeviceIds: Set<string>,
+  inflateBy = 0,
 ): boolean {
   if (points.length < 2) return false
   const boxes = devices
     .filter((d) => !excludeDeviceIds.has(d.id))
-    .map((d) => deviceWorldAABB(d))
+    .map((d) => {
+      const b = deviceWorldAABB(d)
+      if (inflateBy > 0) b.expandByScalar(inflateBy)
+      return b
+    })
 
   for (let i = 0; i < points.length - 1; i++) {
     const pa = points[i]!
