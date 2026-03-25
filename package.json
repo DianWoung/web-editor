@@ -5,8 +5,11 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w twin-web",
+    "dev": "npm run dev:web",
+    "dev:web": "npm run dev -w twin-web",
+    "dev:api": "npm run dev -w mock-api",
     "build": "npm run build -w twin-web",
+    "build:api": "npm run build -w mock-api",
     "preview": "npm run preview -w twin-web"
   }
 }

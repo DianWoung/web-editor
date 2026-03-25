@@ -8,6 +8,7 @@ import {
   type CatalogAsset,
   type RenderStyle,
 } from '@/services/loadEquipmentCatalog'
+import { collectAssetPackFiles } from '@/services/assetPackImport'
 
 type Props = {
   catalog: CatalogAsset[] | null
@@ -32,25 +33,7 @@ export function DevicePalette({
   const packInputRef = useRef<HTMLInputElement>(null)
 
   const parseAssetPackFromFiles = async (files: File[]) => {
-    // 结构约定（你已确认“2”：根目录下多个子文件夹，每个子文件夹是一台设备模板）
-    // 例如：MyPack/aircon_ico_v1/asset.json
-    //        MyPack/aircon_ico_v1/ports.json
-    //        MyPack/aircon_ico_v1/model.glb (可选)
-    type WithWebkitRelativePath = File & { webkitRelativePath?: string }
-    const byAssetId: Record<string, { assetFile?: File; portsFile?: File; glbFile?: File }> = {}
-
-    for (const f of files) {
-      const rel = (f as WithWebkitRelativePath).webkitRelativePath
-      const parts = rel ? rel.split('/') : []
-      // 至少：根目录/子目录/文件名
-      if (parts.length < 3) continue
-      const assetFolder = parts[1]
-      const fileName = parts[parts.length - 1]
-      byAssetId[assetFolder] ??= {}
-      if (fileName === 'asset.json') byAssetId[assetFolder]!.assetFile = f
-      else if (fileName === 'ports.json') byAssetId[assetFolder]!.portsFile = f
-      else if (fileName === 'model.glb') byAssetId[assetFolder]!.glbFile = f
-    }
+    const byAssetId = collectAssetPackFiles(files)
 
     const assets: CatalogAsset[] = []
     for (const [assetFolder, pack] of Object.entries(byAssetId)) {
@@ -90,6 +73,10 @@ export function DevicePalette({
           direction: x.direction,
         })),
       })
+    }
+
+    if (assets.length === 0) {
+      throw new Error('未识别到有效资产包：请直接选择包含 asset.json / ports.json 的资产文件夹，或选择其上层打包目录。')
     }
 
     return assets

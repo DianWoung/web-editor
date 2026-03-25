@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "chiller_centrifugal_v1",
+  "displayName": "离心冷水机组",
+  "type": "chiller",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [1.2, 1.5, 2.5]
+  },
+  "modelGlb": false
+}

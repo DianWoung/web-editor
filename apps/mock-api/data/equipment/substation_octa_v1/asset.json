@@ -1,0 +1,13 @@
+{
+  "assetVersion": 1,
+  "assetId": "substation_octa_v1",
+  "displayName": "变电站（多面体 C · 2 端口）",
+  "type": "substation",
+  "defaultSystem": "CDW",
+  "bounds": {
+    "halfExtents": [0.7, 0.35, 0.55]
+  },
+  "renderStyle": "octahedron",
+  "modelGlb": false
+}
+

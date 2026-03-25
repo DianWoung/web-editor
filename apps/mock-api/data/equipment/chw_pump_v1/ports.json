@@ -1,0 +1,18 @@
+{
+  "ports": [
+    {
+      "id": "in",
+      "name": "入口",
+      "position": [-0.35, 0, 0],
+      "system": "CHWP",
+      "direction": "in"
+    },
+    {
+      "id": "out",
+      "name": "出口",
+      "position": [0.35, 0, 0],
+      "system": "CHWP",
+      "direction": "out"
+    }
+  ]
+}

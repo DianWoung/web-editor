@@ -1,38 +1,15 @@
 import { z } from 'zod'
 import type { PortDef } from '@/schemas/port'
-
-export const catalogSchema = z.object({
-  assets: z.array(z.string().min(1)),
-})
-
-export type RenderStyle = 'box' | 'icosahedron' | 'dodecahedron' | 'octahedron'
-
-export const assetJsonSchema = z.object({
-  assetVersion: z.number().int().positive(),
-  assetId: z.string().min(1),
-  displayName: z.string().min(1),
-  type: z.string().min(1),
-  defaultSystem: z.string().min(1),
-  bounds: z.object({
-    halfExtents: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
-  }),
-  /** 占位渲染风格：当 modelGlb=false 时用于生成多面体几何 */
-  renderStyle: z.enum(['box', 'icosahedron', 'dodecahedron', 'octahedron']).optional(),
-  /** 为 true 时尝试加载 `/equipment/{assetId}/model.glb` */
-  modelGlb: z.boolean().optional(),
-})
-
-export const portsFileSchema = z.object({
-  ports: z.array(
-    z.object({
-      id: z.string().min(1),
-      name: z.string().min(1),
-      position: z.tuple([z.number(), z.number(), z.number()]),
-      system: z.string().min(1),
-      direction: z.string().min(1),
-    }),
-  ),
-})
+import {
+  getEquipmentAssetJson,
+  getEquipmentCatalogAssetIds,
+  getEquipmentPortsJson,
+} from '@/services/api/equipmentApi'
+import {
+  assetJsonSchema,
+  portsFileSchema,
+  type RenderStyle,
+} from '@/services/equipmentSchemas'
 
 export type CatalogAsset = {
   assetVersion: number
@@ -73,29 +50,21 @@ function mapCatalogAsset(
 }
 
 async function loadEquipmentAsset(assetId: string): Promise<CatalogAsset> {
-  const [assetRes, portsRes] = await Promise.all([
-    fetch(`/equipment/${assetId}/asset.json`),
-    fetch(`/equipment/${assetId}/ports.json`),
+  const [asset, ports] = await Promise.all([
+    getEquipmentAssetJson(assetId),
+    getEquipmentPortsJson(assetId),
   ])
-  if (!assetRes.ok) throw new Error(`加载 asset 失败 ${assetId}: ${assetRes.status}`)
-  if (!portsRes.ok) throw new Error(`加载 ports 失败 ${assetId}: ${portsRes.status}`)
-
-  const assetJson: unknown = await assetRes.json()
-  const portsJson: unknown = await portsRes.json()
-  const asset = assetJsonSchema.parse(assetJson)
-  const ports = portsFileSchema.parse(portsJson)
   return mapCatalogAsset(asset, ports)
 }
 
 export async function loadEquipmentCatalog(): Promise<CatalogAsset[]> {
-  const catRes = await fetch('/equipment/catalog.json')
-  if (!catRes.ok) throw new Error(`加载 catalog 失败: ${catRes.status}`)
-  const catJson: unknown = await catRes.json()
-  const cat = catalogSchema.parse(catJson)
-  return Promise.all(cat.assets.map((assetId) => loadEquipmentAsset(assetId)))
+  const assetIds = await getEquipmentCatalogAssetIds()
+  return Promise.all(assetIds.map((assetId) => loadEquipmentAsset(assetId)))
 }
 
 export async function loadEquipmentAssetsByIds(assetIds: string[]): Promise<CatalogAsset[]> {
   const uniq = Array.from(new Set(assetIds))
   return Promise.all(uniq.map((assetId) => loadEquipmentAsset(assetId)))
 }
+
+export { assetJsonSchema, catalogSchema, portsFileSchema, type RenderStyle } from '@/services/equipmentSchemas'

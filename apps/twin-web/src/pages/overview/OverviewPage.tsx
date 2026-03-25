@@ -1,20 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ViewerCanvas } from '@/components/scene/ViewerCanvas'
 import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipmentCatalog'
-import { loadDemoSceneIntoStore } from '@/services/loadDemoScene'
+import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSceneStore } from '@/store/sceneStore'
 
 export function OverviewPage() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
+  const [catalogError, setCatalogError] = useState<string | null>(null)
+  const [sceneError, setSceneError] = useState<string | null>(null)
 
   useEffect(() => {
     let c = true
     loadEquipmentCatalog()
       .then((x) => {
-        if (c) setCatalog(x)
+        if (c) {
+          setCatalog(x)
+          setCatalogError(null)
+        }
       })
-      .catch(() => {
-        if (c) setCatalog([])
+      .catch((error) => {
+        if (c) {
+          setCatalog([])
+          setCatalogError(error instanceof Error ? error.message : String(error))
+        }
       })
     return () => {
       c = false
@@ -22,7 +30,15 @@ export function OverviewPage() {
   }, [])
 
   useEffect(() => {
-    if (useSceneStore.getState().devices.length === 0) void loadDemoSceneIntoStore()
+    let active = true
+    if (useSceneStore.getState().devices.length > 0) return
+    void loadCurrentSceneIntoStore().then((result) => {
+      if (!active) return
+      setSceneError(result.ok ? null : result.error)
+    })
+    return () => {
+      active = false
+    }
   }, [])
 
   const modelUrlByAssetId = useMemo(() => {
@@ -76,6 +92,18 @@ export function OverviewPage() {
           <h2>机房边界</h2>
           <p className="muted small">演示场景未挂载墙体轮廓；可在编排页扩展房间多边形后在此叠加显示。</p>
         </section>
+        {catalogError ? (
+          <section className="overview-card">
+            <h2>设备库错误</h2>
+            <p className="muted small">{catalogError}</p>
+          </section>
+        ) : null}
+        {sceneError ? (
+          <section className="overview-card">
+            <h2>场景错误</h2>
+            <p className="muted small">{sceneError}</p>
+          </section>
+        ) : null}
       </aside>
       <main className="overview-canvas">
         <ViewerCanvas modelUrlByAssetId={modelUrlByAssetId} renderStyleByAssetId={renderStyleByAssetId} />

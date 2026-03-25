@@ -1,0 +1,13 @@
+{
+  "assetVersion": 1,
+  "assetId": "aircon_main_icosa_v1",
+  "displayName": "大型空调主机（多面体 A · 4 端口）",
+  "type": "aircon_main",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [1.2, 0.45, 0.8]
+  },
+  "renderStyle": "icosahedron",
+  "modelGlb": true
+}
+

@@ -1,14 +1,38 @@
-import { formatSceneParseError, parseSceneJson } from '@/schemas/scene'
+import { getCurrentScene, resetDemoScene, saveCurrentScene } from '@/services/api/sceneApi'
 import { useSceneStore } from '@/store/sceneStore'
+import type { SceneFile } from '@/schemas/scene'
 
-export async function loadDemoSceneIntoStore(): Promise<{ ok: true } | { ok: false; error: string }> {
-  const res = await fetch('/scenes/demo.scene.json')
-  if (!res.ok) return { ok: false, error: `示例场景加载失败：HTTP ${res.status}` }
-  const json: unknown = await res.json()
-  const parsed = parseSceneJson(json)
-  if (!parsed.success) {
-    return { ok: false, error: `示例场景校验失败：\n${formatSceneParseError(parsed.error)}` }
+type ServiceResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string }
+
+function applySceneToStore(scene: SceneFile) {
+  useSceneStore.getState().loadScene(scene)
+}
+
+export async function loadCurrentSceneIntoStore(): Promise<ServiceResult> {
+  try {
+    applySceneToStore(await getCurrentScene())
+    return { ok: true, data: undefined }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
-  useSceneStore.getState().loadScene(parsed.data)
-  return { ok: true }
+}
+
+export async function loadDemoSceneIntoStore(): Promise<ServiceResult> {
+  try {
+    applySceneToStore(await resetDemoScene())
+    return { ok: true, data: undefined }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+export async function saveCurrentSceneFromStore(): Promise<ServiceResult<{ updatedAt: string }>> {
+  try {
+    const text = useSceneStore.getState().exportSceneJson()
+    const scene = JSON.parse(text) as SceneFile
+    const result = await saveCurrentScene(scene)
+    return { ok: true, data: { updatedAt: result.updatedAt } }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+  }
 }

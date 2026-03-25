@@ -6,6 +6,7 @@ import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
 import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
+import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSceneStore } from '@/store/sceneStore'
 
 export function EditorPage() {
@@ -35,6 +36,13 @@ export function EditorPage() {
     return () => {
       cancelled = true
     }
+  }, [])
+
+  useEffect(() => {
+    if (useSceneStore.getState().devices.length > 0) return
+    void loadCurrentSceneIntoStore().then((result) => {
+      if (!result.ok) useSceneStore.getState().setError(result.error)
+    })
   }, [])
 
   useEffect(() => {

@@ -1,10 +1,11 @@
-import { useRef, type ChangeEvent } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { useSceneStore } from '@/store/sceneStore'
 import type { SnapGridOption } from '@/store/sceneStore'
-import { loadDemoSceneIntoStore } from '@/services/loadDemoScene'
+import { loadDemoSceneIntoStore, saveCurrentSceneFromStore } from '@/services/loadDemoScene'
 
 export function SceneJsonToolbar() {
   const fileRef = useRef<HTMLInputElement>(null)
+  const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const exportSceneJson = useSceneStore((s) => s.exportSceneJson)
   const importSceneJsonText = useSceneStore((s) => s.importSceneJsonText)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
@@ -41,14 +42,29 @@ export function SceneJsonToolbar() {
   }
 
   const loadDemo = async () => {
+    setSaveStatus(null)
     clearError()
     const r = await loadDemoSceneIntoStore()
     if (!r.ok) useSceneStore.getState().setError(r.error)
   }
 
+  const saveScene = async () => {
+    setSaveStatus(null)
+    clearError()
+    const r = await saveCurrentSceneFromStore()
+    if (!r.ok) {
+      useSceneStore.getState().setError(r.error)
+      return
+    }
+    setSaveStatus(`已保存 ${new Date(r.data.updatedAt).toLocaleTimeString()}`)
+  }
+
   return (
     <footer className="toolbar">
       <div className="toolbar-row">
+        <button type="button" className="primary" onClick={saveScene}>
+          保存到后端
+        </button>
         <button type="button" className="primary" onClick={download}>
           导出 scene.json
         </button>
@@ -65,6 +81,7 @@ export function SceneJsonToolbar() {
         <button type="button" className="secondary" onClick={() => applyStressTest(80)}>
           压测：80 台 + 管线
         </button>
+        {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
         <span className="toolbar-hint">性能基线：URL 加 <code>?stress=80</code> 启动即生成</span>
       </div>
       <div className="toolbar-row toolbar-row--secondary">
