@@ -7,6 +7,10 @@ const _mat = new Matrix4()
 const _quat = new Quaternion()
 const _euler = new Euler(0, 0, 0, 'XYZ')
 
+// Pipe geometry matches apps/twin-web/src/components/scene/PipeRun.tsx
+const PIPE_CYLINDER_RADIUS = 0.06
+const PIPE_ELBOW_SPHERE_RADIUS = 0.09
+
 function degToRad(d: number) {
   return (d * Math.PI) / 180
 }
@@ -46,7 +50,11 @@ export function deviceWorldAABB(device: Device): Box3 {
   return _box.clone()
 }
 
-function segmentAabbIntersect(a: Vector3, b: Vector3, box: Box3): boolean {
+function segmentAabbIntersectT(
+  a: Vector3,
+  b: Vector3,
+  box: Box3,
+): { tmin: number; tmax: number } | null {
   // Slab method
   const dir = _v.copy(b).sub(a)
   const invX = dir.x !== 0 ? 1 / dir.x : Number.POSITIVE_INFINITY
@@ -74,7 +82,8 @@ function segmentAabbIntersect(a: Vector3, b: Vector3, box: Box3): boolean {
   tmin = Math.max(tmin, Math.min(tz1, tz2))
   tmax = Math.min(tmax, Math.max(tz1, tz2))
 
-  return tmax >= tmin
+  if (tmax < tmin) return null
+  return { tmin, tmax }
 }
 
 export function pipeSegmentsCollideDevices(
@@ -82,21 +91,55 @@ export function pipeSegmentsCollideDevices(
   devices: Device[],
   excludeDeviceIds: Set<string>,
   inflateBy = 0,
+  /** 忽略线段两端附近（港口接入处）的碰撞，避免“刚连上端口就被判冲突”。 */
+  ignoreEndpointDistance = 0,
 ): boolean {
   if (points.length < 2) return false
-  const boxes = devices
+
+  const boxesSegment = devices
     .filter((d) => !excludeDeviceIds.has(d.id))
     .map((d) => {
       const b = deviceWorldAABB(d)
-      if (inflateBy > 0) b.expandByScalar(inflateBy)
+      b.expandByScalar(Math.max(0, PIPE_CYLINDER_RADIUS + inflateBy))
       return b
     })
+
+  const boxesElbow = devices
+    .filter((d) => !excludeDeviceIds.has(d.id))
+    .map((d) => {
+      const b = deviceWorldAABB(d)
+      b.expandByScalar(Math.max(0, PIPE_ELBOW_SPHERE_RADIUS + inflateBy))
+      return b
+    })
+
+  // 先检查拐点球体（PipeRun elbow 用 sphereGeometry radius=0.09）
+  for (let j = 1; j < points.length - 1; j++) {
+    const p = points[j]!
+    for (const box of boxesElbow) {
+      if (box.containsPoint(p)) return true
+    }
+  }
 
   for (let i = 0; i < points.length - 1; i++) {
     const pa = points[i]!
     const pb = points[i + 1]!
-    for (const box of boxes) {
-      if (segmentAabbIntersect(pa, pb, box)) return true
+    const dir = _v.copy(pb).sub(pa)
+    const segLen = dir.length()
+
+    const ignoreT = segLen > 1e-6 && ignoreEndpointDistance > 0 ? Math.min(0.45, ignoreEndpointDistance / segLen) : 0
+
+    for (const box of boxesSegment) {
+      const hit = segmentAabbIntersectT(pa, pb, box)
+      if (!hit) continue
+
+      if (ignoreT > 0) {
+        // 仅发生在起点附近 或 仅发生在终点附近时忽略
+        const nearStart = hit.tmax <= ignoreT
+        const nearEnd = hit.tmin >= 1 - ignoreT
+        if (nearStart || nearEnd) continue
+      }
+
+      return true
     }
   }
   return false

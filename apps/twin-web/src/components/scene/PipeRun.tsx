@@ -59,15 +59,16 @@ export function PipeRun({
     if (!okA || !okB) {
       return { points: [] as Vector3[], conflict: false, colorHex: systemColor(pipe.system) }
     }
-    const pa = parsePipeEndpoint(pipe.from)
-    const pb = parsePipeEndpoint(pipe.to)
+    // 端点设备无需显式排除：由 pipeCollision 的 ignoreEndpointDistance 处理端口接入处的“允许区域”。
+    // 不排除端点设备：若路由穿入端口设备主体，也应当被冲突检测捕获并通过抬高 trunkY 来避让。
+    // 端口处的“应允许”由 pipeCollision 内部的 ignoreEndpointDistance 处理。
     const exclude = new Set<string>()
-    if (pa) exclude.add(pa.deviceId)
-    if (pb) exclude.add(pb.deviceId)
 
     // 1) 用更保守的 AABB 膨胀，减少“轴线穿过但圆柱仍插入”的假阴性。
     // 2) 若仍检测到冲突，尝试把主管标高 trunkY 向上抬高，最多 +2.0m（按你的选择 2）。
-    const PIPE_COLLISION_INFLATE = 0.1
+    // inflateBy 为在 pipe 半径之外的额外安全裕量（pipeCollision 内部会按 pipe cylinder/sphere 半径再次膨胀）
+    const PIPE_COLLISION_INFLATE = 0.02
+    const PIPE_IGNORE_ENDPOINT = 0.08
     const MAX_TRUNK_RAISE = 2.0
     const TRUNK_RAISE_STEP = 0.5
 
@@ -80,7 +81,7 @@ export function PipeRun({
     let conflict = true
     for (const trunkY of candidates) {
       const nextPts = buildOrthogonalRoute(a, b, trunkY)
-      const nextConflict = pipeSegmentsCollideDevices(nextPts, devices, exclude, PIPE_COLLISION_INFLATE)
+      const nextConflict = pipeSegmentsCollideDevices(nextPts, devices, exclude, PIPE_COLLISION_INFLATE, PIPE_IGNORE_ENDPOINT)
       pts = nextPts
       conflict = nextConflict
       if (!conflict) break
