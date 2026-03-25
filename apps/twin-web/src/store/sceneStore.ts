@@ -279,8 +279,8 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     // 不排除端点设备：若路由穿入端口设备主体，也要被冲突检测捕获。
     // 端口接入附近的“允许”由 ignoreEndpointDistance 处理。
     const exclude = new Set<string>()
-    const PIPE_COLLISION_INFLATE = 0.02
-    const PIPE_IGNORE_ENDPOINT = 0.08
+    const PIPE_COLLISION_INFLATE = 0.03
+    const PIPE_IGNORE_ENDPOINT = 0.05
     const conflict = pipeSegmentsCollideDevices(pts, get().devices, exclude, PIPE_COLLISION_INFLATE, PIPE_IGNORE_ENDPOINT)
     if (conflict) {
       get().setError('该连接会与设备包围盒冲突，已阻止生成管线。')

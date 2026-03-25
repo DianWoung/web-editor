@@ -67,8 +67,8 @@ export function PipeRun({
     // 1) 用更保守的 AABB 膨胀，减少“轴线穿过但圆柱仍插入”的假阴性。
     // 2) 若仍检测到冲突，尝试把主管标高 trunkY 向上抬高，最多 +2.0m（按你的选择 2）。
     // inflateBy 为在 pipe 半径之外的额外安全裕量（pipeCollision 内部会按 pipe cylinder/sphere 半径再次膨胀）
-    const PIPE_COLLISION_INFLATE = 0.02
-    const PIPE_IGNORE_ENDPOINT = 0.08
+    const PIPE_COLLISION_INFLATE = 0.03
+    const PIPE_IGNORE_ENDPOINT = 0.05
     // 为避免端口点位于设备内部导致“圆柱端头穿入”，从路径两端沿相邻线段方向裁剪一点点
     const PIPE_ENDPOINT_TRIM = 0.09
     const MAX_TRUNK_RAISE = 2.0

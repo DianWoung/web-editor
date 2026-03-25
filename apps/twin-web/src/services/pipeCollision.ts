@@ -126,7 +126,9 @@ export function pipeSegmentsCollideDevices(
     const dir = _v.copy(pb).sub(pa)
     const segLen = dir.length()
 
-    const ignoreT = segLen > 1e-6 && ignoreEndpointDistance > 0 ? Math.min(0.45, ignoreEndpointDistance / segLen) : 0
+    // 注意：ignoreEndpointDistance/segLen 在“短线段”上会放大比例。
+    // 这里将 ignore 的最大比例收得更小，避免漏报（从而仍出现穿模）。
+    const ignoreT = segLen > 1e-6 && ignoreEndpointDistance > 0 ? Math.min(0.2, ignoreEndpointDistance / segLen) : 0
 
     for (const box of boxesSegment) {
       const hit = segmentAabbIntersectT(pa, pb, box)
