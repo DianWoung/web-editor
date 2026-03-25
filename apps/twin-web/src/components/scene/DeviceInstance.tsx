@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Billboard, Text, TransformControls } from '@react-three/drei'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { Box3 } from 'three'
+import { Box3, Vector3 } from 'three'
 import type { Group } from 'three'
 import type { Device } from '@/schemas/device'
 import type { PortDef } from '@/schemas/port'
@@ -33,6 +33,7 @@ export function DeviceInstance({
   onOpenDevice,
 }: Props) {
   const groupRef = useRef<Group>(null)
+  const modelVisualRef = useRef<Group>(null)
   const [tcObject, setTcObject] = useState<Group | null>(null)
   const draggingRef = useRef(false)
   const [glbScene, setGlbScene] = useState<Group | null>(null)
@@ -94,15 +95,56 @@ export function DeviceInstance({
   }, [device.position, device.rotation])
 
   const [hx, hy, hz] = device.boundsHalfExtents
-  const modelTopY = useMemo(() => {
-    if (!modelUrl || !glbScene || glbFailed) return hy
-    const box = new Box3().setFromObject(glbScene)
-    return box.isEmpty() ? hy : box.max.y
-  }, [glbFailed, glbScene, hy, modelUrl])
+  /** 性能兜底：编辑态只对“当前选中设备”显示名称，避免大量 `Text/Billboard` 成为开销。 */
+  const showLabel = mode === 'viewer' ? true : isDeviceSelected
+
+  const [modelTopLocal, setModelTopLocal] = useState<[number, number, number]>([0, hy, 0])
+
+  useLayoutEffect(() => {
+    let cancelled = false
+    let next: [number, number, number] = [0, hy, 0]
+    // 未启用/未加载到可测量的视觉模型，回退到包围盒近似
+    if (!showLabel || !modelUrl || !glbScene || glbFailed || !groupRef.current || !modelVisualRef.current) {
+      Promise.resolve().then(() => {
+        if (cancelled) return
+        setModelTopLocal(next)
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    // 使用“当前朝向下”的视觉模型包围盒顶部点，并转换到父级局部坐标
+    // 这样可实现你选择的 B：文字跟随模型旋转后的“局部顶面最高点”贴合。
+    const box = new Box3().setFromObject(modelVisualRef.current)
+    if (box.isEmpty()) {
+      Promise.resolve().then(() => {
+        if (cancelled) return
+        setModelTopLocal(next)
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+
+    const topCenterWorld = new Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2)
+    const local = groupRef.current.worldToLocal(topCenterWorld)
+    next = [local.x, local.y, local.z]
+    Promise.resolve().then(() => {
+      if (cancelled) return
+      setModelTopLocal(next)
+    })
+    // label 在设备变换时需要重新贴合
+    return () => {
+      cancelled = true
+    }
+  }, [showLabel, modelUrl, glbScene, glbFailed, hy, device.position, device.rotation])
 
   const labelFontSize = Math.min(0.18 + Math.max(hx, hz) * 0.04, 0.32)
   /** 包围盒顶面正上方：文字 anchorY=bottom，故 Y 为字形底缘，紧贴模型顶留一小缝 */
-  const labelY = modelTopY + labelFontSize * 0.52 + 0.05
+  const labelY = modelTopLocal[1] + labelFontSize * 0.52 + 0.05
+  const labelX = modelTopLocal[0]
+  const labelZ = modelTopLocal[2]
   const baseColor = isDeviceSelected ? sceneTheme.deviceSelected : sceneTheme.deviceIdle
   const emissiveColor = isDeviceSelected ? sceneTheme.deviceSelectedEmissive : sceneTheme.deviceIdleEmissive
   const emissiveIntensity = isDeviceSelected
@@ -134,7 +176,8 @@ export function DeviceInstance({
   return (
     <group>
       <group ref={bindGroupRef} onClick={handleGroupClick}>
-        <group>
+        {/* 视觉模型根节点：用于测量“模型在当前朝向下的顶部点” */}
+        <group ref={modelVisualRef}>
           {modelUrl && glbScene && !glbFailed ? (
             <primitive object={glbScene} />
           ) : (
@@ -174,20 +217,22 @@ export function DeviceInstance({
               onPick={() => handlePortPick(p.id)}
             />
           ))}
-        <Billboard follow position={[0, labelY, 0]}>
-          <Text
-            fontSize={labelFontSize}
-            color={sceneTheme.deviceLabelFill}
-            outlineWidth={0.02}
-            outlineColor={sceneTheme.deviceLabelOutline}
-            anchorX="center"
-            anchorY="bottom"
-            maxWidth={5}
-            textAlign="center"
-          >
-            {device.name}
-          </Text>
-        </Billboard>
+        {showLabel ? (
+          <Billboard follow position={[labelX, labelY, labelZ]}>
+            <Text
+              fontSize={labelFontSize}
+              color={sceneTheme.deviceLabelFill}
+              outlineWidth={0.02}
+              outlineColor={sceneTheme.deviceLabelOutline}
+              anchorX="center"
+              anchorY="bottom"
+              maxWidth={5}
+              textAlign="center"
+            >
+              {device.name}
+            </Text>
+          </Billboard>
+        ) : null}
       </group>
 
       {isDeviceSelected && tcObject ? (
