@@ -69,6 +69,8 @@ export function PipeRun({
     // inflateBy 为在 pipe 半径之外的额外安全裕量（pipeCollision 内部会按 pipe cylinder/sphere 半径再次膨胀）
     const PIPE_COLLISION_INFLATE = 0.02
     const PIPE_IGNORE_ENDPOINT = 0.08
+    // 为避免端口点位于设备内部导致“圆柱端头穿入”，从路径两端沿相邻线段方向裁剪一点点
+    const PIPE_ENDPOINT_TRIM = 0.09
     const MAX_TRUNK_RAISE = 2.0
     const TRUNK_RAISE_STEP = 0.5
 
@@ -77,10 +79,10 @@ export function PipeRun({
       candidates.push(TRUNK_Y + k * TRUNK_RAISE_STEP)
     }
 
-    let pts = buildOrthogonalRoute(a, b, TRUNK_Y)
+    let pts = buildOrthogonalRoute(a, b, TRUNK_Y, PIPE_ENDPOINT_TRIM)
     let conflict = true
     for (const trunkY of candidates) {
-      const nextPts = buildOrthogonalRoute(a, b, trunkY)
+      const nextPts = buildOrthogonalRoute(a, b, trunkY, PIPE_ENDPOINT_TRIM)
       const nextConflict = pipeSegmentsCollideDevices(nextPts, devices, exclude, PIPE_COLLISION_INFLATE, PIPE_IGNORE_ENDPOINT)
       pts = nextPts
       conflict = nextConflict

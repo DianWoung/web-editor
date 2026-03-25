@@ -9,6 +9,7 @@ import { buildOrthogonalRoute } from '@/services/orthogonalRoute'
 import { getPortWorldPosition } from '@/utils/portWorld'
 import { snapVec3 } from '@/utils/snap'
 import { Vector3 } from 'three'
+import { TRUNK_Y } from '@/constants/trunk'
 
 export type Selection =
   | { kind: 'device'; deviceId: string }
@@ -273,7 +274,8 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     const wb = new Vector3()
     getPortWorldPosition(devA, portA, wa)
     getPortWorldPosition(devB, portB, wb)
-    const pts = buildOrthogonalRoute(wa, wb)
+    const PIPE_ENDPOINT_TRIM = 0.09
+    const pts = buildOrthogonalRoute(wa, wb, TRUNK_Y, PIPE_ENDPOINT_TRIM)
     // 不排除端点设备：若路由穿入端口设备主体，也要被冲突检测捕获。
     // 端口接入附近的“允许”由 ignoreEndpointDistance 处理。
     const exclude = new Set<string>()
