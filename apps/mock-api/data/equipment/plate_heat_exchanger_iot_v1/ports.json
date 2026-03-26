@@ -1,0 +1,32 @@
+{
+  "ports": [
+    {
+      "id": "primary_in",
+      "name": "一次侧入口",
+      "position": [-2.85, 1.7, 1.2],
+      "system": "CHW",
+      "direction": "in"
+    },
+    {
+      "id": "primary_out",
+      "name": "一次侧出口",
+      "position": [-2.85, 4.95, -1.2],
+      "system": "CHW",
+      "direction": "out"
+    },
+    {
+      "id": "secondary_in",
+      "name": "二次侧入口",
+      "position": [2.85, 1.7, 1.2],
+      "system": "CHW2",
+      "direction": "in"
+    },
+    {
+      "id": "secondary_out",
+      "name": "二次侧出口",
+      "position": [2.85, 4.95, -1.2],
+      "system": "CHW2",
+      "direction": "out"
+    }
+  ]
+}

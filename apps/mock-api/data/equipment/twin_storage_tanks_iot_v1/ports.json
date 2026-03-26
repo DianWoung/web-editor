@@ -1,0 +1,18 @@
+{
+  "ports": [
+    {
+      "id": "tank_in",
+      "name": "蓄能入口",
+      "position": [-4.02, 1.1, 0.0],
+      "system": "CHW",
+      "direction": "in"
+    },
+    {
+      "id": "tank_out",
+      "name": "蓄能出口",
+      "position": [4.02, 3.2, 0.0],
+      "system": "CHW",
+      "direction": "out"
+    }
+  ]
+}

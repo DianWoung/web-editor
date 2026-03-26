@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "twin_storage_tanks_iot_v1",
+  "displayName": "双罐并列蓄能罐模组",
+  "type": "storage-tank",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [4.2, 4.2, 1.9]
+  },
+  "modelGlb": true
+}

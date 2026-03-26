@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "plate_heat_exchanger_iot_v1",
+  "displayName": "板式换热器模组",
+  "type": "heat-exchanger",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [3.1, 4.2, 1.8]
+  },
+  "modelGlb": true
+}
