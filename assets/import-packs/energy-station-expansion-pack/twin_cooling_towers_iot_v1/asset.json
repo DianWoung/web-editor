@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "twin_cooling_towers_iot_v1",
+  "displayName": "双塔并联冷却塔组",
+  "type": "cooling-tower",
+  "defaultSystem": "CW",
+  "bounds": {
+    "halfExtents": [8.4, 6.3, 4.2]
+  },
+  "modelGlb": true
+}

@@ -1,0 +1,25 @@
+{
+  "ports": [
+    {
+      "id": "ctrl_in",
+      "name": "控制信号入口",
+      "position": [-1.8, 4.82, -1.05],
+      "system": "CTRL",
+      "direction": "in"
+    },
+    {
+      "id": "io_out",
+      "name": "IO 输出",
+      "position": [3.5, 0.52, -1.35],
+      "system": "CTRL",
+      "direction": "out"
+    },
+    {
+      "id": "power_in",
+      "name": "电源输入",
+      "position": [1.55, 0.52, -1.35],
+      "system": "ELEC",
+      "direction": "in"
+    }
+  ]
+}

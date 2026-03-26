@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "plc_console_iot_v1",
+  "displayName": "PLC 控制柜与操作台",
+  "type": "plc-console",
+  "defaultSystem": "CTRL",
+  "bounds": {
+    "halfExtents": [5.4, 5.3, 2.6]
+  },
+  "modelGlb": true
+}

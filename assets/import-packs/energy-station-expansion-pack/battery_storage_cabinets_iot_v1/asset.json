@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "battery_storage_cabinets_iot_v1",
+  "displayName": "三柜成组储能电池柜",
+  "type": "battery-storage",
+  "defaultSystem": "ELEC",
+  "bounds": {
+    "halfExtents": [6.4, 4.9, 2.4]
+  },
+  "modelGlb": true
+}

@@ -1,0 +1,25 @@
+{
+  "ports": [
+    {
+      "id": "cw_in",
+      "name": "冷却水入口",
+      "position": [-7.0, 1.22, -2.95],
+      "system": "CW",
+      "direction": "in"
+    },
+    {
+      "id": "cw_out",
+      "name": "冷却水出口",
+      "position": [7.0, 1.22, -2.95],
+      "system": "CW",
+      "direction": "out"
+    },
+    {
+      "id": "ctrl_in",
+      "name": "控制接口",
+      "position": [0.0, 4.26, -1.05],
+      "system": "CTRL",
+      "direction": "in"
+    }
+  ]
+}

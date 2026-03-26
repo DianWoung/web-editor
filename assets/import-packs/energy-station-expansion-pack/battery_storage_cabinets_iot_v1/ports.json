@@ -1,0 +1,25 @@
+{
+  "ports": [
+    {
+      "id": "dc_in",
+      "name": "直流输入",
+      "position": [-4.9, 4.24, -0.98],
+      "system": "DC",
+      "direction": "in"
+    },
+    {
+      "id": "dc_out",
+      "name": "直流输出",
+      "position": [4.9, 4.24, -0.98],
+      "system": "DC",
+      "direction": "out"
+    },
+    {
+      "id": "bms_ctrl",
+      "name": "BMS 控制接口",
+      "position": [0.0, 3.56, 0.82],
+      "system": "CTRL",
+      "direction": "in"
+    }
+  ]
+}
