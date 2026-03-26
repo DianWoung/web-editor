@@ -1,0 +1,18 @@
+{
+  "ports": [
+    {
+      "id": "chw_in",
+      "name": "总管入口",
+      "position": [-5.4, 1.28, 1.35],
+      "system": "CHW",
+      "direction": "in"
+    },
+    {
+      "id": "chw_out",
+      "name": "总管出口",
+      "position": [5.4, 2.05, -1.15],
+      "system": "CHW",
+      "direction": "out"
+    }
+  ]
+}

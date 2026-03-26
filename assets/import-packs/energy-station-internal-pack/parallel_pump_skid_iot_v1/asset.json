@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "parallel_pump_skid_iot_v1",
+  "displayName": "双泵并联循环水泵组",
+  "type": "pump-skid",
+  "defaultSystem": "CHW",
+  "bounds": {
+    "halfExtents": [5.8, 2.7, 1.7]
+  },
+  "modelGlb": true
+}

@@ -1,0 +1,18 @@
+{
+  "ports": [
+    {
+      "id": "elec_out",
+      "name": "发电输出",
+      "position": [-5.1, 1.2, -1.78],
+      "system": "ELEC",
+      "direction": "out"
+    },
+    {
+      "id": "ctrl_in",
+      "name": "控制输入",
+      "position": [-4.8, 2.0, -1.78],
+      "system": "CTRL",
+      "direction": "in"
+    }
+  ]
+}
