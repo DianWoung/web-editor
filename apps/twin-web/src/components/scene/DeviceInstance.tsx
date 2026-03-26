@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { Billboard, Text, TransformControls } from '@react-three/drei'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { Box3, Vector3 } from 'three'
+import { AnimationMixer, Box3, Vector3 } from 'three'
 import type { Group } from 'three'
 import type { Device } from '@/schemas/device'
 import type { PortDef } from '@/schemas/port'
@@ -11,6 +12,7 @@ import { PortMarker } from '@/components/scene/PortMarker'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 import { applyGltfScenePerformanceDefaults } from '@/utils/gltfPerformance'
+import { isFlowDrivenWindTurbine, shouldUseEmbeddedWindTurbineAnimation } from '@/components/scene/windTurbineAnimation'
 
 type Props = {
   device: Device
@@ -19,6 +21,8 @@ type Props = {
   modelUrl?: string | null
   /** 占位多面体渲染风格 */
   renderStyle?: RenderStyle
+  /** 运行态开关：开启时让带旋转结构的设备启动动画 */
+  flowEnabled?: boolean
   /** editor：编排交互；viewer：总览只读，点击进详情 */
   mode?: 'editor' | 'viewer'
   onOpenDevice?: (deviceId: string) => void
@@ -29,11 +33,14 @@ export function DeviceInstance({
   ports,
   modelUrl,
   renderStyle = 'box',
+  flowEnabled = false,
   mode = 'editor',
   onOpenDevice,
 }: Props) {
   const groupRef = useRef<Group>(null)
   const modelVisualRef = useRef<Group>(null)
+  const mixerRef = useRef<AnimationMixer | null>(null)
+  const loadedSceneRef = useRef<Group | null>(null)
   const [tcObject, setTcObject] = useState<Group | null>(null)
   const draggingRef = useRef(false)
   const [glbScene, setGlbScene] = useState<Group | null>(null)
@@ -48,6 +55,7 @@ export function DeviceInstance({
   const setError = useSceneStore((s) => s.setError)
 
   const isDeviceSelected = selection?.kind === 'device' && selection.deviceId === device.id
+  const shouldSpinWithFlow = isFlowDrivenWindTurbine(device.assetId)
 
   const bindGroupRef = (node: Group | null) => {
     groupRef.current = node
@@ -64,6 +72,20 @@ export function DeviceInstance({
         if (cancelled) return
         const scene = gltf.scene.clone(true)
         applyGltfScenePerformanceDefaults(scene)
+        const prevScene = loadedSceneRef.current
+        const useEmbeddedAnimation = shouldUseEmbeddedWindTurbineAnimation(device.assetId, gltf.animations.length)
+        mixerRef.current?.stopAllAction()
+        if (mixerRef.current && prevScene) {
+          mixerRef.current.uncacheRoot(prevScene)
+        }
+        loadedSceneRef.current = scene
+        mixerRef.current = useEmbeddedAnimation ? new AnimationMixer(scene) : null
+        if (mixerRef.current) {
+          gltf.animations.forEach((clip) => {
+            mixerRef.current?.clipAction(clip).play()
+          })
+          mixerRef.current.timeScale = flowEnabled ? 1 : 0
+        }
         setGlbScene(scene)
         setGlbFailed(false)
       },
@@ -81,10 +103,29 @@ export function DeviceInstance({
     )
     return () => {
       cancelled = true
+      mixerRef.current?.stopAllAction()
+      if (mixerRef.current && loadedSceneRef.current) {
+        mixerRef.current.uncacheRoot(loadedSceneRef.current)
+      }
+      mixerRef.current = null
+      loadedSceneRef.current = null
       setGlbScene(null)
       setGlbFailed(false)
     }
-  }, [device.assetId, device.id, mode, modelUrl, setError])
+  }, [device.assetId, device.id, mode, modelUrl, setError, shouldSpinWithFlow])
+
+  useEffect(() => {
+    const mixer = mixerRef.current
+    if (!mixer) return
+    mixer.timeScale = flowEnabled && shouldSpinWithFlow ? 1 : 0
+  }, [flowEnabled, shouldSpinWithFlow])
+
+  useFrame((_, delta) => {
+    const mixer = mixerRef.current
+    if (mixer && flowEnabled && shouldSpinWithFlow) {
+      mixer.update(delta)
+    }
+  })
 
   useLayoutEffect(() => {
     const g = groupRef.current
@@ -140,7 +181,10 @@ export function DeviceInstance({
     }
   }, [showLabel, modelUrl, glbScene, glbFailed, hy, device.position, device.rotation])
 
-  const labelFontSize = Math.min(0.18 + Math.max(hx, hz) * 0.04, 0.32)
+  const labelFontSize =
+    mode === 'viewer'
+      ? Math.min(0.32 + Math.max(hx, hz) * 0.06, 0.62)
+      : Math.min(0.18 + Math.max(hx, hz) * 0.04, 0.32)
   /** 包围盒顶面正上方：文字 anchorY=bottom，故 Y 为字形底缘，紧贴模型顶留一小缝 */
   const labelY = modelTopLocal[1] + labelFontSize * 0.52 + 0.05
   const labelX = modelTopLocal[0]

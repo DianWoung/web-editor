@@ -6,22 +6,117 @@
       "type": "chiller",
       "name": "大型风冷冷水机组",
       "assetId": "large_air_cooled_chiller_iot_v1",
-      "position": [0, 2.1, 0],
-      "rotation": [0, 0, 0],
+      "position": [
+        6.8806480039022375,
+        0.5162956526591351,
+        -11.435820401088902
+      ],
+      "rotation": [
+        -180,
+        2.6800783923274465,
+        -180
+      ],
       "system": "CHW",
-      "tags": ["main_equipment"],
-      "boundsHalfExtents": [8.8, 2.1, 2.3]
+      "tags": [
+        "main_equipment"
+      ],
+      "boundsHalfExtents": [
+        8.8,
+        2.1,
+        2.3
+      ]
     },
     {
-      "id": "DG-01",
-      "type": "generator",
-      "name": "柴油发电机组",
-      "assetId": "diesel_generator_iot_v1",
-      "position": [12, 3.1, 0],
-      "rotation": [0, 0, 0],
+      "id": "PUMP-c681635c",
+      "type": "pump-skid",
+      "name": "双泵并联循环水泵组",
+      "assetId": "parallel_pump_skid_iot_v1",
+      "position": [
+        -17.248115876596184,
+        1.1321971569660052,
+        1.3254754961968338
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "system": "CHW",
+      "tags": [],
+      "boundsHalfExtents": [
+        5.8,
+        2.7,
+        1.7
+      ]
+    },
+    {
+      "id": "PUMP-387ce307",
+      "type": "heat-exchanger",
+      "name": "板式换热器模组",
+      "assetId": "plate_heat_exchanger_iot_v1",
+      "position": [
+        -21.0258164207596,
+        2.0840658236424128,
+        16.142166330076993
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "system": "CHW",
+      "tags": [],
+      "boundsHalfExtents": [
+        3.1,
+        4.2,
+        1.8
+      ]
+    },
+    {
+      "id": "PUMP-2c699b92",
+      "type": "storage-tank",
+      "name": "双罐并列蓄能罐模组",
+      "assetId": "twin_storage_tanks_iot_v1",
+      "position": [
+        10.040767221816349,
+        1.6391633305455278,
+        20.99696085442043
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "system": "CHW",
+      "tags": [],
+      "boundsHalfExtents": [
+        4.2,
+        4.2,
+        1.9
+      ]
+    },
+    {
+      "id": "PUMP-1ba92855",
+      "type": "wind-turbine",
+      "name": "大型风力发电机组",
+      "assetId": "wind_turbine_iot_v1",
+      "position": [
+        -2.6277134281325445,
+        0.18020195298371178,
+        -33.34088032977776
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
       "system": "ELEC",
-      "tags": ["main_equipment"],
-      "boundsHalfExtents": [5.8, 3.1, 2.0]
+      "tags": [],
+      "boundsHalfExtents": [
+        12,
+        22.5,
+        7
+      ]
     }
   ],
   "portGroups": [
@@ -31,38 +126,190 @@
         {
           "id": "chw_in",
           "name": "冷冻回水入口",
-          "position": [-1.0, 0.95, -3.02],
+          "position": [
+            -1,
+            0.95,
+            -3.02
+          ],
           "system": "CHW",
           "direction": "in"
         },
         {
           "id": "chw_out",
           "name": "冷冻供水出口",
-          "position": [1.0, 0.95, -3.02],
+          "position": [
+            1,
+            0.95,
+            -3.02
+          ],
           "system": "CHW",
           "direction": "out"
         }
       ]
     },
     {
-      "deviceId": "DG-01",
+      "deviceId": "PUMP-c681635c",
+      "ports": [
+        {
+          "id": "chw_in",
+          "name": "总管入口",
+          "position": [
+            -5.4,
+            1.28,
+            1.35
+          ],
+          "system": "CHW",
+          "direction": "in"
+        },
+        {
+          "id": "chw_out",
+          "name": "总管出口",
+          "position": [
+            5.4,
+            2.05,
+            -1.15
+          ],
+          "system": "CHW",
+          "direction": "out"
+        }
+      ]
+    },
+    {
+      "deviceId": "PUMP-387ce307",
+      "ports": [
+        {
+          "id": "primary_in",
+          "name": "一次侧入口",
+          "position": [
+            -2.85,
+            1.7,
+            1.2
+          ],
+          "system": "CHW",
+          "direction": "in"
+        },
+        {
+          "id": "primary_out",
+          "name": "一次侧出口",
+          "position": [
+            -2.85,
+            4.95,
+            -1.2
+          ],
+          "system": "CHW",
+          "direction": "out"
+        },
+        {
+          "id": "secondary_in",
+          "name": "二次侧入口",
+          "position": [
+            2.85,
+            1.7,
+            1.2
+          ],
+          "system": "CHW2",
+          "direction": "in"
+        },
+        {
+          "id": "secondary_out",
+          "name": "二次侧出口",
+          "position": [
+            2.85,
+            4.95,
+            -1.2
+          ],
+          "system": "CHW2",
+          "direction": "out"
+        }
+      ]
+    },
+    {
+      "deviceId": "PUMP-2c699b92",
+      "ports": [
+        {
+          "id": "tank_in",
+          "name": "蓄能入口",
+          "position": [
+            -4.02,
+            1.1,
+            0
+          ],
+          "system": "CHW",
+          "direction": "in"
+        },
+        {
+          "id": "tank_out",
+          "name": "蓄能出口",
+          "position": [
+            4.02,
+            3.2,
+            0
+          ],
+          "system": "CHW",
+          "direction": "out"
+        }
+      ]
+    },
+    {
+      "deviceId": "PUMP-1ba92855",
       "ports": [
         {
           "id": "elec_out",
-          "name": "发电输出",
-          "position": [-5.1, 1.2, -1.78],
+          "name": "电力输出",
+          "position": [
+            0,
+            1,
+            -1.2
+          ],
           "system": "ELEC",
           "direction": "out"
         },
         {
           "id": "ctrl_in",
-          "name": "控制输入",
-          "position": [-4.8, 2.0, -1.78],
+          "name": "控制接口",
+          "position": [
+            0.9,
+            2.2,
+            -0.2
+          ],
           "system": "CTRL",
           "direction": "in"
         }
       ]
     }
   ],
-  "pipes": []
+  "pipes": [
+    {
+      "id": "PIPE-53b48102",
+      "from": "PUMP-c681635c.chw_in",
+      "to": "PUMP-387ce307.primary_out",
+      "system": "CHW",
+      "routeType": "orthogonal",
+      "level": "main"
+    },
+    {
+      "id": "PIPE-8bff7160",
+      "from": "PUMP-2c699b92.tank_in",
+      "to": "PUMP-387ce307.primary_in",
+      "system": "CHW",
+      "routeType": "orthogonal",
+      "level": "main"
+    },
+    {
+      "id": "PIPE-6ad159ca",
+      "from": "CH-01.chw_out",
+      "to": "PUMP-c681635c.chw_out",
+      "system": "CHW",
+      "routeType": "orthogonal",
+      "level": "main"
+    },
+    {
+      "id": "PIPE-11451710",
+      "from": "CH-01.chw_in",
+      "to": "PUMP-2c699b92.tank_out",
+      "system": "CHW",
+      "routeType": "orthogonal",
+      "level": "main"
+    }
+  ]
 }

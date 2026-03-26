@@ -8,6 +8,8 @@ export function OverviewPage() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [sceneError, setSceneError] = useState<string | null>(null)
+  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
+  const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
 
   useEffect(() => {
     let c = true
@@ -92,6 +94,19 @@ export function OverviewPage() {
           <h2>机房边界</h2>
           <p className="muted small">演示场景未挂载墙体轮廓；可在编排页扩展房间多边形后在此叠加显示。</p>
         </section>
+        <section className="overview-card">
+          <h2>管道流动</h2>
+          <label className="field" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>流动模式</span>
+            <input
+              type="checkbox"
+              checked={flowEnabled}
+              onChange={(e) => setFlowEnabled(e.target.checked)}
+              aria-label="管道流动模式"
+            />
+          </label>
+          <p className="muted small">开启后，直管段会显示流动虚线效果（GPU/CPU 开销会略增）。</p>
+        </section>
         {catalogError ? (
           <section className="overview-card">
             <h2>设备库错误</h2>
@@ -106,7 +121,11 @@ export function OverviewPage() {
         ) : null}
       </aside>
       <main className="overview-canvas">
-        <ViewerCanvas modelUrlByAssetId={modelUrlByAssetId} renderStyleByAssetId={renderStyleByAssetId} />
+        <ViewerCanvas
+          modelUrlByAssetId={modelUrlByAssetId}
+          renderStyleByAssetId={renderStyleByAssetId}
+          flowEnabled={flowEnabled}
+        />
         <div className="overview-hint">点击设备进入详情（Mock 数据）</div>
       </main>
     </div>

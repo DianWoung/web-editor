@@ -13,9 +13,10 @@ import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
 type Props = {
   modelUrlByAssetId: Record<string, string | null | undefined>
   renderStyleByAssetId: Record<string, RenderStyle | undefined>
+  flowEnabled?: boolean
 }
 
-export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId }: Props) {
+export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnabled = false }: Props) {
   const navigate = useNavigate()
   const devices = useSceneStore((s) => s.devices)
   const portGroups = useSceneStore((s) => s.portGroups)
@@ -64,7 +65,7 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId }: Props)
       <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
       <RoomFloor showGrid={false} />
       {pipes.map((p) => (
-        <PipeRun key={p.id} pipe={p} devices={devices} portGroups={portGroups} />
+        <PipeRun key={p.id} pipe={p} devices={devices} portGroups={portGroups} flowEnabled={flowEnabled} />
       ))}
       {devices.map((d) => {
         const pg = portGroups.find((g) => g.deviceId === d.id)
@@ -76,6 +77,7 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId }: Props)
             ports={ports}
             modelUrl={modelUrlByAssetId[d.assetId] ?? null}
             renderStyle={renderStyleByAssetId[d.assetId] ?? 'box'}
+            flowEnabled={flowEnabled}
             mode="viewer"
             onOpenDevice={openDevice}
           />

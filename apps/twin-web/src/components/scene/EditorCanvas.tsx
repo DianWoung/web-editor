@@ -116,6 +116,7 @@ export function EditorCanvas({
             ports={ports}
             modelUrl={modelUrlByAssetId[d.assetId] ?? null}
             renderStyle={renderStyleByAssetId[d.assetId] ?? 'box'}
+            flowEnabled={flowEnabled}
           />
         )
       })}

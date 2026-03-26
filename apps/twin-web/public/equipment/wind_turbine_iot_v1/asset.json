@@ -1,0 +1,11 @@
+{
+  "assetVersion": 1,
+  "assetId": "wind_turbine_iot_v1",
+  "displayName": "大型风力发电机组",
+  "type": "wind-turbine",
+  "defaultSystem": "ELEC",
+  "bounds": {
+    "halfExtents": [12.0, 22.5, 7.0]
+  },
+  "modelGlb": true
+}

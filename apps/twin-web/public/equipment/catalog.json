@@ -4,6 +4,7 @@
     "diesel_generator_iot_v1",
     "parallel_pump_skid_iot_v1",
     "plate_heat_exchanger_iot_v1",
-    "twin_storage_tanks_iot_v1"
+    "twin_storage_tanks_iot_v1",
+    "wind_turbine_iot_v1"
   ]
 }
