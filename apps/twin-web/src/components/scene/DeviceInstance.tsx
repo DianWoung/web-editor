@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Billboard, Text, TransformControls } from '@react-three/drei'
+import { Billboard } from '@react-three/drei/core/Billboard'
+import { Text } from '@react-three/drei/core/Text'
+import { TransformControls } from '@react-three/drei/core/TransformControls'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { AnimationMixer, Box3, Vector3 } from 'three'
 import type { Group } from 'three'
@@ -84,7 +86,7 @@ export function DeviceInstance({
           gltf.animations.forEach((clip) => {
             mixerRef.current?.clipAction(clip).play()
           })
-          mixerRef.current.timeScale = flowEnabled ? 1 : 0
+          mixerRef.current.timeScale = 0
         }
         setGlbScene(scene)
         setGlbFailed(false)

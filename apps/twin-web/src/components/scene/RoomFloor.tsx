@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { Grid } from '@react-three/drei'
+import { Grid } from '@react-three/drei/core/Grid'
 import { sceneTheme } from '@/theme/sceneTheme'
 
 type Props = {

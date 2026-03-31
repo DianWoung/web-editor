@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Html } from '@react-three/drei/web/Html'
 import type { PortDef } from '@/schemas/port'
 import { systemColor } from '@/constants/systemColors'
 

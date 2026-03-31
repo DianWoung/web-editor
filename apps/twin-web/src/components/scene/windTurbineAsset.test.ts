@@ -3,6 +3,35 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 
+type GltfNode = {
+  name?: string
+  translation?: [number, number, number]
+  rotation?: [number, number, number, number]
+  children?: number[]
+}
+
+type GltfAccessor = {
+  bufferView: number
+  byteOffset?: number
+  count: number
+  type: 'SCALAR' | 'VEC2' | 'VEC3' | 'VEC4' | 'MAT4'
+}
+
+type GltfBufferView = {
+  byteOffset?: number
+}
+
+type GltfAnimation = {
+  samplers: Array<{ output: number }>
+}
+
+type GltfDocument = {
+  nodes?: GltfNode[]
+  accessors?: GltfAccessor[]
+  bufferViews?: GltfBufferView[]
+  animations?: GltfAnimation[]
+}
+
 function readGlbJson(glbPath: string) {
   const data = fs.readFileSync(glbPath)
   const length = data.readUInt32LE(8)
@@ -14,7 +43,7 @@ function readGlbJson(glbPath: string) {
     const chunk = data.subarray(offset, offset + chunkLength)
     offset += chunkLength
     if (chunkType === 'JSON') {
-      return JSON.parse(chunk.toString('utf8'))
+      return JSON.parse(chunk.toString('utf8')) as GltfDocument
     }
   }
   throw new Error(`GLB JSON chunk not found: ${glbPath}`)
@@ -24,7 +53,7 @@ function readGlb(glbPath: string) {
   const data = fs.readFileSync(glbPath)
   const length = data.readUInt32LE(8)
   let offset = 12
-  let json: Record<string, unknown> | null = null
+  let json: GltfDocument | null = null
   let bin: Buffer | null = null
   while (offset < length) {
     const chunkLength = data.readUInt32LE(offset)
@@ -33,7 +62,7 @@ function readGlb(glbPath: string) {
     const chunk = data.subarray(offset, offset + chunkLength)
     offset += chunkLength
     if (chunkType === 'JSON') {
-      json = JSON.parse(chunk.toString('utf8'))
+      json = JSON.parse(chunk.toString('utf8')) as GltfDocument
     } else if (chunkType === 'BIN\0') {
       bin = Buffer.from(chunk)
     }
@@ -44,9 +73,11 @@ function readGlb(glbPath: string) {
   return { json, bin }
 }
 
-function readFloatAccessor(gltf: any, bin: Buffer, accessorIndex: number): number[] {
-  const accessor = gltf.accessors[accessorIndex]
-  const bufferView = gltf.bufferViews[accessor.bufferView]
+function readFloatAccessor(gltf: GltfDocument, bin: Buffer, accessorIndex: number): number[] {
+  const accessor = gltf.accessors?.[accessorIndex]
+  assert.ok(accessor, `missing accessor at index ${accessorIndex}`)
+  const bufferView = gltf.bufferViews?.[accessor.bufferView]
+  assert.ok(bufferView, `missing bufferView at index ${accessor.bufferView}`)
   const componentCountByType: Record<string, number> = {
     SCALAR: 1,
     VEC2: 2,
@@ -89,7 +120,7 @@ function applyQuaternion(
 test('wind turbine rotor children are stored in rotor-local coordinates', () => {
   const glbPath = path.resolve(process.cwd(), 'assets/models/wind_turbine_iot_web.glb')
   const gltf = readGlbJson(glbPath)
-  const nodes = gltf.nodes as Array<{ name?: string; translation?: [number, number, number]; children?: number[] }>
+  const nodes = gltf.nodes ?? []
   const byName = new Map(nodes.map((node, index) => [node.name, index]))
   const rotorIndex = byName.get('RotorAssembly')
 
@@ -111,7 +142,8 @@ test('wind turbine rotor children are stored in rotor-local coordinates', () => 
 test('wind turbine animation rotates around the rotor axle instead of the vertical axis', () => {
   const glbPath = path.resolve(process.cwd(), 'assets/models/wind_turbine_iot_web.glb')
   const { json: gltf, bin } = readGlb(glbPath)
-  const animation = (gltf.animations as Array<any>)[0]
+  const animation = gltf.animations?.[0]
+  assert.ok(animation, 'missing wind turbine animation clip')
   const outputAccessorIndex = animation.samplers[0].output
   const quaternions = readFloatAccessor(gltf, bin, outputAccessorIndex)
 
@@ -128,10 +160,8 @@ test('wind turbine animation rotates around the rotor axle instead of the vertic
 
 test('wind turbine blades fan out in one vertical rotor plane instead of pointing the same direction', () => {
   const glbPath = path.resolve(process.cwd(), 'assets/models/wind_turbine_iot_web.glb')
-  const gltf = readGlbJson(glbPath) as {
-    nodes: Array<{ name?: string; rotation?: [number, number, number, number] }>
-  }
-  const byName = new Map(gltf.nodes.map((node) => [node.name, node]))
+  const gltf = readGlbJson(glbPath)
+  const byName = new Map((gltf.nodes ?? []).map((node) => [node.name, node]))
   const rotorRotation = byName.get('RotorAssembly')?.rotation ?? [0, 0, 0, 1]
   const bladeDirections = ['Blade_1', 'Blade_2', 'Blade_3'].map((name) => {
     const bladeRotation = byName.get(name)?.rotation ?? [0, 0, 0, 1]

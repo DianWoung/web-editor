@@ -3,13 +3,20 @@ import { ViewerCanvas } from '@/components/scene/ViewerCanvas'
 import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSceneStore } from '@/store/sceneStore'
+import { useRuntimeStore } from '@/store/runtimeStore'
+import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
 
 export function OverviewPage() {
+  useSyncRuntimeWithScene()
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [sceneError, setSceneError] = useState<string | null>(null)
   const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
   const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
+  const totalPower = useRuntimeStore((s) => s.totalPower)
+  const avgCop = useRuntimeStore((s) => s.avgCop)
+  const activeAlarmCount = useRuntimeStore((s) => s.activeAlarmCount)
+  const lastUpdatedAt = useRuntimeStore((s) => s.lastUpdatedAt)
 
   useEffect(() => {
     let c = true
@@ -66,18 +73,19 @@ export function OverviewPage() {
           <h2>关键指标</h2>
           <ul className="overview-kpi">
             <li>
-              <span className="kpi-label">PUE（演示）</span>
-              <span className="kpi-value">1.38</span>
+              <span className="kpi-label">总功率</span>
+              <span className="kpi-value">{totalPower.toFixed(1)} kW</span>
             </li>
             <li>
-              <span className="kpi-label">冷负荷</span>
-              <span className="kpi-value">2,840 kW</span>
+              <span className="kpi-label">平均 COP</span>
+              <span className="kpi-value">{avgCop.toFixed(2)}</span>
             </li>
             <li>
-              <span className="kpi-label">当日能耗</span>
-              <span className="kpi-value">18.2 MWh</span>
+              <span className="kpi-label">活动告警</span>
+              <span className="kpi-value">{activeAlarmCount}</span>
             </li>
           </ul>
+          <p className="muted small">运行态更新时间：{lastUpdatedAt ?? '—'}</p>
         </section>
         <section className="overview-card">
           <h2>运行模式</h2>

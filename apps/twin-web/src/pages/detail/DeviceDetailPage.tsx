@@ -1,7 +1,9 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getMockDeviceRuntime } from '@/services/mockDeviceRuntime'
+import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
+import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
 import { useSceneStore } from '@/store/sceneStore'
+import { useRuntimeStore } from '@/store/runtimeStore'
 
 const TrendChart = lazy(async () => {
   const mod = await import('@/components/charts/TrendChart')
@@ -9,17 +11,41 @@ const TrendChart = lazy(async () => {
 })
 
 export function DeviceDetailPage() {
+  useSyncRuntimeWithScene()
   const { deviceId: rawId } = useParams<{ deviceId: string }>()
   const deviceId = rawId ? decodeURIComponent(rawId) : ''
   const devices = useSceneStore((s) => s.devices)
+  const [sceneError, setSceneError] = useState<string | null>(null)
+  const [loadingScene, setLoadingScene] = useState(() => devices.length === 0)
   const device = useMemo(() => devices.find((d) => d.id === deviceId), [devices, deviceId])
+  const runtime = useRuntimeStore((s) => (deviceId ? s.getDeviceRuntime(deviceId) ?? null : null))
 
-  const runtime = useMemo(() => (device ? getMockDeviceRuntime(device) : null), [device])
+  useEffect(() => {
+    let active = true
+    if (devices.length > 0) return
+    void loadCurrentSceneIntoStore().then((result) => {
+      if (!active) return
+      setSceneError(result.ok ? null : result.error)
+      setLoadingScene(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [devices.length])
+
+  if (loadingScene) {
+    return (
+      <div className="detail-page detail-page--empty">
+        <p>正在加载场景…</p>
+      </div>
+    )
+  }
 
   if (!device || !runtime) {
     return (
       <div className="detail-page detail-page--empty">
         <p>未找到设备「{deviceId || '—'}」。</p>
+        {sceneError ? <p className="muted small">{sceneError}</p> : null}
         <Link to="/overview" className="primary">
           返回总览
         </Link>

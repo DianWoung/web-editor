@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
 import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'

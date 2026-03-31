@@ -1,5 +1,9 @@
 # twin-web — 阶段 1 MVP 场景编排器
 
+## 项目补充文档
+
+- 仓库级技术栈与风险清单：`../../docs/project-tech-stack-and-risks.md`
+
 ## 路由（阶段 2）
 
 - `/` → 重定向到 **`/overview`**

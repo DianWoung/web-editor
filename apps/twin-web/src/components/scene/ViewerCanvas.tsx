@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { Canvas } from '@react-three/fiber'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
 import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'

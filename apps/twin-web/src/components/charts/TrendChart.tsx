@@ -1,6 +1,21 @@
-import * as echarts from 'echarts'
 import { useEffect, useRef } from 'react'
+import { LineChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+} from 'echarts/components'
+import { init, use as registerEcharts } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import type { ComposeOption } from 'echarts/core'
+import type { GridComponentOption, TooltipComponentOption } from 'echarts/components'
+import type { LineSeriesOption } from 'echarts/charts'
 import type { TrendSample } from '@/schemas/deviceRuntime'
+
+registerEcharts([LineChart, GridComponent, TooltipComponent, CanvasRenderer])
+
+type TrendChartOption = ComposeOption<
+  GridComponentOption | TooltipComponentOption | LineSeriesOption
+>
 
 type Props = {
   data: TrendSample[]
@@ -14,8 +29,8 @@ export function TrendChart({ data, seriesName = '数值' }: Props) {
     const el = ref.current
     if (!el || data.length === 0) return
 
-    const chart = echarts.init(el, undefined, { renderer: 'canvas' })
-    chart.setOption({
+    const chart = init(el, undefined, { renderer: 'canvas' })
+    const option: TrendChartOption = {
       backgroundColor: 'transparent',
       textStyle: { color: '#9eb0c4' },
       tooltip: {
@@ -49,7 +64,8 @@ export function TrendChart({ data, seriesName = '数值' }: Props) {
           areaStyle: { color: 'rgba(69, 196, 232, 0.14)' },
         },
       ],
-    })
+    }
+    chart.setOption(option)
 
     const ro = new ResizeObserver(() => chart.resize())
     ro.observe(el)
