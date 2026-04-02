@@ -1,4 +1,8 @@
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+const apiBaseUrl =
+  ((import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? '/api').replace(
+    /\/$/,
+    '',
+  )
 
 async function parseApiError(response: Response): Promise<string> {
   try {

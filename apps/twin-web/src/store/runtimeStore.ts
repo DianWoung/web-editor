@@ -1,65 +1,108 @@
 import { create } from 'zustand'
 
 import type { Device } from '../schemas/device.ts'
-import type { AlarmRow, DeviceRuntimeMock } from '../schemas/deviceRuntime.ts'
-import { getMockDeviceRuntime } from '../services/mockDeviceRuntime.ts'
+import type { DeviceRuntime, RuntimeOverview } from '../schemas/deviceRuntime.ts'
+import { runtimeApi } from '../services/api/runtimeApi.ts'
 
 type RuntimeState = {
-  runtimes: Map<string, DeviceRuntimeMock>
-  globalAlarms: AlarmRow[]
+  overview: RuntimeOverview | null
+  runtimes: Map<string, DeviceRuntime>
   totalPower: number
   avgCop: number
   activeAlarmCount: number
   lastUpdatedAt: string | null
+  loadingOverview: boolean
+  loadingDeviceIds: string[]
+  overviewError: string | null
+  deviceErrorById: Record<string, string>
+  lastFetchedAt: string | null
 }
 
 type RuntimeActions = {
+  fetchOverview: () => Promise<void>
+  fetchDeviceRuntime: (deviceId: string) => Promise<void>
   refreshRuntimes: (devices: Device[]) => void
-  getDeviceRuntime: (deviceId: string) => DeviceRuntimeMock | undefined
+  getDeviceRuntime: (deviceId: string) => DeviceRuntime | undefined
   clear: () => void
 }
 
 const initialState: RuntimeState = {
+  overview: null,
   runtimes: new Map(),
-  globalAlarms: [],
   totalPower: 0,
   avgCop: 0,
   activeAlarmCount: 0,
   lastUpdatedAt: null,
+  loadingOverview: false,
+  loadingDeviceIds: [],
+  overviewError: null,
+  deviceErrorById: {},
+  lastFetchedAt: null,
 }
 
 export const useRuntimeStore = create<RuntimeState & RuntimeActions>((set, get) => ({
   ...initialState,
 
-  refreshRuntimes: (devices) => {
-    const runtimes = new Map<string, DeviceRuntimeMock>()
-    const globalAlarms: AlarmRow[] = []
-    let totalPower = 0
-    let copTotal = 0
-    let copCount = 0
+  fetchOverview: async () => {
+    set({ loadingOverview: true, overviewError: null })
+    try {
+      const overview = await runtimeApi.getRuntimeOverview()
+      set({
+        overview,
+        totalPower: overview.totalPower,
+        avgCop: overview.avgCop,
+        activeAlarmCount: overview.activeAlarmCount,
+        lastUpdatedAt: overview.lastUpdatedAt,
+        loadingOverview: false,
+        overviewError: null,
+        lastFetchedAt: new Date().toISOString(),
+      })
+    } catch (error) {
+      set({
+        loadingOverview: false,
+        overviewError: error instanceof Error ? error.message : String(error),
+      })
+    }
+  },
 
+  fetchDeviceRuntime: async (deviceId) => {
+    set((state) => ({
+      loadingDeviceIds: state.loadingDeviceIds.includes(deviceId)
+        ? state.loadingDeviceIds
+        : [...state.loadingDeviceIds, deviceId],
+      deviceErrorById: { ...state.deviceErrorById, [deviceId]: '' },
+    }))
+
+    try {
+      const runtime = await runtimeApi.getDeviceRuntime(deviceId)
+      set((state) => {
+        const runtimes = new Map(state.runtimes)
+        runtimes.set(deviceId, runtime)
+        const loadingDeviceIds = state.loadingDeviceIds.filter((id) => id !== deviceId)
+        const deviceErrorById = { ...state.deviceErrorById }
+        delete deviceErrorById[deviceId]
+        return {
+          runtimes,
+          loadingDeviceIds,
+          deviceErrorById,
+          lastFetchedAt: new Date().toISOString(),
+        }
+      })
+    } catch (error) {
+      set((state) => ({
+        loadingDeviceIds: state.loadingDeviceIds.filter((id) => id !== deviceId),
+        deviceErrorById: {
+          ...state.deviceErrorById,
+          [deviceId]: error instanceof Error ? error.message : String(error),
+        },
+      }))
+    }
+  },
+
+  refreshRuntimes: (devices: Device[]) => {
+    void get().fetchOverview()
     devices.forEach((device) => {
-      const runtime = getMockDeviceRuntime(device)
-      runtimes.set(device.id, runtime)
-      globalAlarms.push(...runtime.alarms)
-
-      const powerPoint = runtime.points.find((point) => point.id === 'power')
-      if (powerPoint) totalPower += powerPoint.value
-
-      const copPoint = runtime.points.find((point) => point.id === 'cop')
-      if (copPoint) {
-        copTotal += copPoint.value
-        copCount += 1
-      }
-    })
-
-    set({
-      runtimes,
-      globalAlarms,
-      totalPower: Math.round(totalPower * 10) / 10,
-      avgCop: copCount > 0 ? Math.round((copTotal / copCount) * 100) / 100 : 0,
-      activeAlarmCount: globalAlarms.length,
-      lastUpdatedAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+      void get().fetchDeviceRuntime(device.id)
     })
   },
 

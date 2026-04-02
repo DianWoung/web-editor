@@ -1,6 +1,7 @@
 /** 阶段 2：设备运行态 Mock（对接真 API 前） */
 
-export type TelemetryQuality = 'good' | 'bad'
+export type TelemetryQuality = 'good' | 'bad' | 'stale'
+export type OnlineStatus = 'online' | 'offline' | 'degraded'
 
 export type TelemetryPoint = {
   id: string
@@ -24,10 +25,19 @@ export type TrendSample = {
   v: number
 }
 
-export type DeviceRuntimeMock = {
+export type RuntimeOverview = {
+  totalPower: number
+  avgCop: number
+  activeAlarmCount: number
+  lastUpdatedAt: string | null
+}
+
+export type DeviceRuntime = {
   deviceId: string
   deviceName: string
   system: string
+  onlineStatus: OnlineStatus
+  updatedAt: string
   points: TelemetryPoint[]
   trend: TrendSample[]
   alarms: AlarmRow[]
@@ -36,3 +46,5 @@ export type DeviceRuntimeMock = {
   strategyHint: string
   aiSuggestion: string
 }
+
+export type DeviceRuntimeMock = DeviceRuntime
