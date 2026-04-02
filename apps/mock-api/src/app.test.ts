@@ -12,13 +12,24 @@ async function setupFixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'mock-api-'))
   await mkdir(path.join(root, 'scene'), { recursive: true })
   await mkdir(path.join(root, 'equipment', 'chw_pump_v1'), { recursive: true })
+  const pumpDevice = {
+    id: 'CHW-PUMP-1',
+    type: 'pump',
+    name: 'CHW Pump 1',
+    assetId: 'chw_pump_v1',
+    position: [0, 0.35, 0],
+    rotation: [0, 0, 0],
+    system: 'CHW',
+    tags: [],
+    boundsHalfExtents: [0.35, 0.35, 0.35],
+  }
   await writeFile(
     path.join(root, 'scene', 'current.scene.json'),
-    JSON.stringify({ version: 1, devices: [], portGroups: [], pipes: [] }, null, 2),
+    JSON.stringify({ version: 1, devices: [pumpDevice], portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }], pipes: [] }, null, 2),
   )
   await writeFile(
     path.join(root, 'scene', 'demo.scene.json'),
-    JSON.stringify({ version: 1, devices: [], portGroups: [], pipes: [] }, null, 2),
+    JSON.stringify({ version: 1, devices: [pumpDevice], portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }], pipes: [] }, null, 2),
   )
   await writeFile(
     path.join(root, 'equipment', 'catalog.json'),
@@ -98,8 +109,20 @@ test('GET /api/scene returns the current scene file', async () => {
   assert.equal(res.statusCode, 200)
   assert.deepEqual(res._getJSONData(), {
     version: 1,
-    devices: [],
-    portGroups: [],
+    devices: [
+      {
+        id: 'CHW-PUMP-1',
+        type: 'pump',
+        name: 'CHW Pump 1',
+        assetId: 'chw_pump_v1',
+        position: [0, 0.35, 0],
+        rotation: [0, 0, 0],
+        system: 'CHW',
+        tags: [],
+        boundsHalfExtents: [0.35, 0.35, 0.35],
+      },
+    ],
+    portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }],
     pipes: [],
   })
 })
@@ -168,4 +191,109 @@ test('GET /api/equipment/:assetId and ports return persisted asset files', async
   assert.equal(assetRes._getJSONData().assetId, 'chw_pump_v1')
   assert.equal(portsRes.statusCode, 200)
   assert.equal(portsRes._getJSONData().ports.length, 2)
+})
+
+test('GET /api/runtime/overview returns runtime summary fields', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/overview')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(typeof body.totalPower, 'number')
+  assert.equal(typeof body.avgCop, 'number')
+  assert.equal(typeof body.activeAlarmCount, 'number')
+  assert.equal(typeof body.lastUpdatedAt, 'string')
+  assert.match(body.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/)
+})
+
+test('GET /api/runtime/overview computes freshness per request', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const first = await performRequest(app, 'GET', '/api/runtime/overview')
+  await new Promise((resolve) => setTimeout(resolve, 20))
+  const second = await performRequest(app, 'GET', '/api/runtime/overview')
+
+  assert.equal(first.statusCode, 200)
+  assert.equal(second.statusCode, 200)
+  assert.notEqual(first._getJSONData().lastUpdatedAt, second._getJSONData().lastUpdatedAt)
+})
+
+test('GET /api/runtime/devices/:deviceId returns runtime detail fields', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-1')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(body.deviceId, 'CHW-PUMP-1')
+  assert.equal(body.deviceName, 'CHW Pump 1')
+  assert.equal(body.system, 'CHW')
+  assert.equal(body.onlineStatus, 'online')
+  assert.equal(typeof body.updatedAt, 'string')
+  assert.ok(Array.isArray(body.points))
+  assert.ok(Array.isArray(body.alarms))
+  assert.ok(Array.isArray(body.trend))
+  assert.deepEqual(body.points[0], {
+    id: 'power',
+    name: 'Power',
+    value: 18.4,
+    unit: 'kW',
+    quality: 'good',
+  })
+  assert.deepEqual(body.alarms[0], {
+    id: 'CHW-PUMP-1-LOW-FLOW',
+    level: 'warning',
+    message: 'Flow is below target',
+    time: body.alarms[0].time,
+  })
+  assert.deepEqual(body.trend[0], { t: body.trend[0].t, v: 17.9 })
+})
+
+test('GET /api/runtime/devices/:deviceId reflects the current scene inventory', async () => {
+  const dataRoot = await setupFixture()
+  await writeFile(
+    path.join(dataRoot, 'scene', 'current.scene.json'),
+    JSON.stringify(
+      {
+        version: 1,
+        devices: [
+          {
+            id: 'CHW-PUMP-2',
+            type: 'pump',
+            name: 'CHW Pump 2',
+            assetId: 'chw_pump_v1',
+            position: [1, 0.35, 0],
+            rotation: [0, 0, 0],
+            system: 'CHW',
+            tags: [],
+            boundsHalfExtents: [0.35, 0.35, 0.35],
+          },
+        ],
+        portGroups: [{ deviceId: 'CHW-PUMP-2', ports: [] }],
+        pipes: [],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-2')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(body.deviceId, 'CHW-PUMP-2')
+  assert.equal(body.deviceName, 'CHW Pump 2')
+  assert.equal(body.system, 'CHW')
+})
+
+test('GET /api/runtime/devices/UNKNOWN returns not found', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/UNKNOWN')
+
+  assert.equal(res.statusCode, 404)
+  assert.equal(res._getJSONData().ok, false)
 })
