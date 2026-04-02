@@ -1,5 +1,3 @@
-/** 阶段 2：设备运行态 Mock（对接真 API 前） */
-
 export type TelemetryQuality = 'good' | 'bad' | 'stale'
 export type OnlineStatus = 'online' | 'offline' | 'degraded'
 

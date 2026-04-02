@@ -21,8 +21,8 @@ export function DeviceDetailPage() {
   const device = useMemo(() => devices.find((d) => d.id === deviceId), [devices, deviceId])
   const fetchDeviceRuntime = useRuntimeStore((s) => s.fetchDeviceRuntime)
   const runtime = useRuntimeStore((s) => (deviceId ? s.getDeviceRuntime(deviceId) ?? null : null))
-  const loadingRuntime = useRuntimeStore((s) => (deviceId ? s.loadingDeviceIds.includes(deviceId) : false))
-  const runtimeError = useRuntimeStore((s) => (deviceId ? s.deviceErrorById[deviceId] ?? null : null))
+  const loadingRuntime = useRuntimeStore((s) => (deviceId ? s.loadingDeviceIds.has(deviceId) : false))
+  const runtimeError = useRuntimeStore((s) => (deviceId ? s.deviceErrorById.get(deviceId) ?? null : null))
 
   useEffect(() => {
     let active = true
@@ -37,7 +37,9 @@ export function DeviceDetailPage() {
     }
   }, [devices.length])
 
-  useRuntimePolling(() => fetchDeviceRuntime(deviceId), 10_000, deviceId.length > 0 && devices.length > 0)
+  useRuntimePolling(async () => {
+    await fetchDeviceRuntime(deviceId)
+  }, 10_000, deviceId.length > 0 && devices.length > 0)
 
   if (loadingScene) {
     return (

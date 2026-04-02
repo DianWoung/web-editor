@@ -55,7 +55,9 @@ export function OverviewPage() {
     }
   }, [])
 
-  useRuntimePolling(() => fetchOverview(), 10_000, deviceCount > 0)
+  useRuntimePolling(async () => {
+    await fetchOverview()
+  }, 10_000, deviceCount > 0)
 
   const modelUrlByAssetId = useMemo(() => {
     const m: Record<string, string | null | undefined> = {}

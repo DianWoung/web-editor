@@ -5,8 +5,10 @@ import { getDeviceRuntime, getRuntimeOverview } from './runtimeApi.ts'
 
 test('getRuntimeOverview parses overview payload from the backend', async () => {
   const originalFetch = globalThis.fetch
-  globalThis.fetch = (async () =>
-    new Response(
+  let requestedUrl = ''
+  globalThis.fetch = (async (input) => {
+    requestedUrl = String(input)
+    return new Response(
       JSON.stringify({
         totalPower: 512.4,
         avgCop: 5.23,
@@ -14,7 +16,8 @@ test('getRuntimeOverview parses overview payload from the backend', async () => 
         lastUpdatedAt: '2026-04-02T00:00:00.000Z',
       }),
       { status: 200, headers: { 'content-type': 'application/json' } },
-    )) as typeof fetch
+    )
+  }) as typeof fetch
 
   try {
     const overview = await getRuntimeOverview()
@@ -24,6 +27,7 @@ test('getRuntimeOverview parses overview payload from the backend', async () => 
       activeAlarmCount: 2,
       lastUpdatedAt: '2026-04-02T00:00:00.000Z',
     })
+    assert.equal(requestedUrl, '/api/runtime/overview')
   } finally {
     globalThis.fetch = originalFetch
   }
@@ -54,6 +58,21 @@ test('getDeviceRuntime parses backend payload and adds default detail copy', asy
     assert.equal(detail.runMode, 'AI_OPT')
     assert.ok(detail.strategyHint.length > 0)
     assert.ok(detail.aiSuggestion.length > 0)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})
+
+test('getDeviceRuntime surfaces backend fetch errors', async () => {
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = (async () =>
+    new Response(JSON.stringify({ error: 'runtime missing' }), {
+      status: 404,
+      headers: { 'content-type': 'application/json' },
+    })) as typeof fetch
+
+  try {
+    await assert.rejects(() => getDeviceRuntime('UNKNOWN'), /runtime missing/)
   } finally {
     globalThis.fetch = originalFetch
   }
