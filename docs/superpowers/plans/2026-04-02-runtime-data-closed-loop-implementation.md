@@ -124,7 +124,7 @@ Expected: PASS
 
 - [ ] **Step 1: Write a failing test for snapshot override**
 
-Add a test that writes an injected runtime snapshot file under `apps/mock-api/data/runtime/` in the test fixture and expects the runtime endpoint to return snapshot values instead of generated values.
+Add a test that writes an injected runtime snapshot file under the fixture-specific `<dataRoot>/runtime/` directory created by `apps/mock-api/src/app.test.ts`, then expect the runtime endpoint to return snapshot values instead of generated values.
 
 - [ ] **Step 2: Verify the override test fails**
 
@@ -154,20 +154,27 @@ Expected: PASS
 
 Create `apps/twin-web/src/services/api/runtimeApi.test.ts` with a test that expects a runtime overview parser/client helper to accept backend JSON containing `totalPower`, `avgCop`, `activeAlarmCount`, and `lastUpdatedAt`.
 
-- [ ] **Step 2: Add a runnable frontend test command and verify red**
+- [ ] **Step 2: Add a scoped frontend test command and verify red**
 
-Add a `test` script to `apps/twin-web/package.json` using the same Node test runner pattern already used elsewhere, then run:
+Add a `test` script to `apps/twin-web/package.json` using the Node test runner, but scope it to the runtime-focused test files so unrelated existing test failures do not pollute the TDD loop. The command should explicitly include only:
+- `src/services/api/runtimeApi.test.ts`
+- `src/store/runtimeStore.test.ts`
+- any new runtime page or hook test files added by this plan
+
+Then run:
 
 Run: `npm test -w twin-web`
 Expected: FAIL because the runtime API module and types do not exist yet.
 
 - [ ] **Step 3: Update frontend runtime contract types**
 
-Replace the current local-mock-only shape in `apps/twin-web/src/schemas/deviceRuntime.ts` with API-backed types:
+Replace the current local-mock-only shape in `apps/twin-web/src/schemas/deviceRuntime.ts` with API-backed types for overview/detail runtime payloads:
 - `RuntimeOverview`
 - `DeviceRuntime`
 - `OnlineStatus`
 - `TelemetryQuality` including `stale`
+
+Keep `runMode`, `runModeDescription`, `strategyHint`, and `aiSuggestion` available to `DeviceDetailPage` for now, because backend-owning those fields is explicitly out of scope in the approved design. The runtime contract migration must not silently remove those UI sections.
 
 - [ ] **Step 4: Implement `runtimeApi.ts`**
 
@@ -228,20 +235,22 @@ Expected: PASS
 - Modify: `apps/twin-web/src/pages/overview/OverviewPage.tsx`
 - Modify: `apps/twin-web/src/pages/detail/DeviceDetailPage.tsx`
 - Modify: `apps/twin-web/src/hooks/useSyncRuntimeWithScene.ts`
+- Create: `apps/twin-web/src/pages/runtimeIntegration.test.tsx`
 - Modify or Delete: `apps/twin-web/src/services/mockDeviceRuntime.ts`
-- Test: `apps/twin-web/src/store/runtimeStore.test.ts`
+- Modify: `apps/twin-web/package.json`
 
-- [ ] **Step 1: Write a failing page-facing test or store-driven expectation for overview/detail refresh**
+- [ ] **Step 1: Write a failing page-integration test for overview/detail runtime wiring**
 
-Extend the runtime store test coverage so one test proves:
-- overview data comes from backend fetch results
-- device detail data comes from backend fetch results
-- old local generation behavior is no longer used
+Create `apps/twin-web/src/pages/runtimeIntegration.test.tsx` with a minimal React integration harness for runtime page wiring. The test should prove:
+- overview-related UI reads values from backend fetch results
+- detail-related UI reads values from backend fetch results
+- `DeviceDetailPage` still renders the existing strategy and AI sections
+- old local generation behavior is no longer required for overview/detail
 
 - [ ] **Step 2: Verify the failure**
 
 Run: `npm test -w twin-web`
-Expected: FAIL because the pages and sync hook still rely on local runtime generation.
+Expected: FAIL because the pages and sync hook still rely on local runtime generation or do not yet consume the backend-backed runtime store.
 
 - [ ] **Step 3: Update page integration**
 
