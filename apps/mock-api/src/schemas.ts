@@ -73,7 +73,7 @@ export const runtimePointSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   value: z.number(),
-  unit: z.string().min(1),
+  unit: z.string(),
   quality: z.enum(['good', 'bad', 'stale']),
 })
 
@@ -100,4 +100,12 @@ export const runtimeDeviceSchema = z.object({
   trend: z.array(runtimeTrendPointSchema),
 })
 
+export const runtimeSnapshotSchema = z.object({
+  overview: runtimeOverviewSchema.optional(),
+  devices: z.record(z.string().min(1), runtimeDeviceSchema).default({}),
+})
+
 export type SceneFile = z.infer<typeof sceneFileSchema>
+export type RuntimeDevice = z.infer<typeof runtimeDeviceSchema>
+export type RuntimeOverview = z.infer<typeof runtimeOverviewSchema>
+export type RuntimeSnapshot = z.infer<typeof runtimeSnapshotSchema>
