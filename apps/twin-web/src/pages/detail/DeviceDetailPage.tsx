@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
+import { useRuntimePolling } from '@/hooks/useRuntimePolling'
 import { useSceneStore } from '@/store/sceneStore'
 import { useRuntimeStore } from '@/store/runtimeStore'
 
@@ -18,7 +19,10 @@ export function DeviceDetailPage() {
   const [sceneError, setSceneError] = useState<string | null>(null)
   const [loadingScene, setLoadingScene] = useState(() => devices.length === 0)
   const device = useMemo(() => devices.find((d) => d.id === deviceId), [devices, deviceId])
+  const fetchDeviceRuntime = useRuntimeStore((s) => s.fetchDeviceRuntime)
   const runtime = useRuntimeStore((s) => (deviceId ? s.getDeviceRuntime(deviceId) ?? null : null))
+  const loadingRuntime = useRuntimeStore((s) => (deviceId ? s.loadingDeviceIds.includes(deviceId) : false))
+  const runtimeError = useRuntimeStore((s) => (deviceId ? s.deviceErrorById[deviceId] ?? null : null))
 
   useEffect(() => {
     let active = true
@@ -33,6 +37,8 @@ export function DeviceDetailPage() {
     }
   }, [devices.length])
 
+  useRuntimePolling(() => fetchDeviceRuntime(deviceId), 10_000, deviceId.length > 0 && devices.length > 0)
+
   if (loadingScene) {
     return (
       <div className="detail-page detail-page--empty">
@@ -44,8 +50,9 @@ export function DeviceDetailPage() {
   if (!device || !runtime) {
     return (
       <div className="detail-page detail-page--empty">
-        <p>未找到设备「{deviceId || '—'}」。</p>
+        <p>{loadingRuntime ? '正在加载运行态…' : `未找到设备「${deviceId || '—'}」。`}</p>
         {sceneError ? <p className="muted small">{sceneError}</p> : null}
+        {runtimeError ? <p className="muted small">{runtimeError}</p> : null}
         <Link to="/overview" className="primary">
           返回总览
         </Link>
@@ -62,7 +69,7 @@ export function DeviceDetailPage() {
         <div>
           <h1>{runtime.deviceName}</h1>
           <p className="muted small">
-            {runtime.deviceId} · 系统 {runtime.system} · Mock 数据
+            {runtime.deviceId} · 系统 {runtime.system} · 状态 {runtime.onlineStatus} · 更新时间 {runtime.updatedAt}
           </p>
         </div>
       </header>
@@ -95,7 +102,7 @@ export function DeviceDetailPage() {
         </section>
 
         <section className="detail-card detail-card--wide">
-          <h2>趋势（近 24h，Mock）</h2>
+          <h2>趋势（近 24h）</h2>
           <Suspense fallback={<div className="trend-chart" />}>
             <TrendChart data={runtime.trend} seriesName={runtime.points[0]?.name ?? '趋势'} />
           </Suspense>

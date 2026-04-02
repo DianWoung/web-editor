@@ -4,6 +4,7 @@ import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipment
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSceneStore } from '@/store/sceneStore'
 import { useRuntimeStore } from '@/store/runtimeStore'
+import { useRuntimePolling } from '@/hooks/useRuntimePolling'
 import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
 
 export function OverviewPage() {
@@ -13,10 +14,14 @@ export function OverviewPage() {
   const [sceneError, setSceneError] = useState<string | null>(null)
   const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
   const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
+  const deviceCount = useSceneStore((s) => s.devices.length)
   const totalPower = useRuntimeStore((s) => s.totalPower)
   const avgCop = useRuntimeStore((s) => s.avgCop)
   const activeAlarmCount = useRuntimeStore((s) => s.activeAlarmCount)
   const lastUpdatedAt = useRuntimeStore((s) => s.lastUpdatedAt)
+  const loadingOverview = useRuntimeStore((s) => s.loadingOverview)
+  const overviewError = useRuntimeStore((s) => s.overviewError)
+  const fetchOverview = useRuntimeStore((s) => s.fetchOverview)
 
   useEffect(() => {
     let c = true
@@ -49,6 +54,8 @@ export function OverviewPage() {
       active = false
     }
   }, [])
+
+  useRuntimePolling(() => fetchOverview(), 10_000, deviceCount > 0)
 
   const modelUrlByAssetId = useMemo(() => {
     const m: Record<string, string | null | undefined> = {}
@@ -86,6 +93,7 @@ export function OverviewPage() {
             </li>
           </ul>
           <p className="muted small">运行态更新时间：{lastUpdatedAt ?? '—'}</p>
+          {loadingOverview ? <p className="muted small">运行态加载中…</p> : null}
         </section>
         <section className="overview-card">
           <h2>运行模式</h2>
@@ -127,6 +135,12 @@ export function OverviewPage() {
             <p className="muted small">{sceneError}</p>
           </section>
         ) : null}
+        {overviewError ? (
+          <section className="overview-card">
+            <h2>运行态错误</h2>
+            <p className="muted small">{overviewError}</p>
+          </section>
+        ) : null}
       </aside>
       <main className="overview-canvas">
         <ViewerCanvas
@@ -134,7 +148,7 @@ export function OverviewPage() {
           renderStyleByAssetId={renderStyleByAssetId}
           flowEnabled={flowEnabled}
         />
-        <div className="overview-hint">点击设备进入详情（Mock 数据）</div>
+        <div className="overview-hint">点击设备进入详情（运行态轮询）</div>
       </main>
     </div>
   )

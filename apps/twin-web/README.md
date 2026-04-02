@@ -61,6 +61,14 @@ npm run dev
 - **加载示例场景**：工具条「加载示例场景」或 `public/scenes/demo.scene.json`。
 - **压测**：工具条「压测：80 台 + 管线」，或 URL 查询参数 **`?stress=80`**（上限 500），用于在目标机器上感受帧率并记录卡顿（阶段 1 性能基线）。
 
+## 运行态数据链路（阶段 2 当前形态）
+
+- `/overview` 与 `/detail/:deviceId` 不再直接在前端生成运行态，而是通过 `mock-api` 的 `GET /api/runtime/overview` 与 `GET /api/runtime/devices/:deviceId` 拉取。
+- 前端当前使用 **10 秒轮询** 刷新 overview 与 detail 运行态。
+- 后端默认根据 `current.scene.json` 中的设备清单动态生成 deterministic 运行态，用于联调与演示。
+- 若 `mock-api` 的数据根目录下存在 `runtime/snapshot.json`，后端优先使用其中的 `overview` 与 `devices[deviceId]` 作为覆盖数据。
+- `DeviceDetailPage` 里的运行模式、策略说明、AI 建议目前仍是前端默认文案，不属于本轮 runtime API 的后端职责。
+
 ## 性能基线（请在本机填写）
 
 | 场景        | 设备数 | 管线数 | 分辨率 | 主观帧率/备注 |
