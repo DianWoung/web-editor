@@ -12,13 +12,25 @@ async function setupFixture() {
   const root = await mkdtemp(path.join(tmpdir(), 'mock-api-'))
   await mkdir(path.join(root, 'scene'), { recursive: true })
   await mkdir(path.join(root, 'equipment', 'chw_pump_v1'), { recursive: true })
+  await mkdir(path.join(root, 'runtime'), { recursive: true })
+  const pumpDevice = {
+    id: 'CHW-PUMP-1',
+    type: 'pump',
+    name: 'CHW Pump 1',
+    assetId: 'chw_pump_v1',
+    position: [0, 0.35, 0],
+    rotation: [0, 0, 0],
+    system: 'CHW',
+    tags: [],
+    boundsHalfExtents: [0.35, 0.35, 0.35],
+  }
   await writeFile(
     path.join(root, 'scene', 'current.scene.json'),
-    JSON.stringify({ version: 1, devices: [], portGroups: [], pipes: [] }, null, 2),
+    JSON.stringify({ version: 1, devices: [pumpDevice], portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }], pipes: [] }, null, 2),
   )
   await writeFile(
     path.join(root, 'scene', 'demo.scene.json'),
-    JSON.stringify({ version: 1, devices: [], portGroups: [], pipes: [] }, null, 2),
+    JSON.stringify({ version: 1, devices: [pumpDevice], portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }], pipes: [] }, null, 2),
   )
   await writeFile(
     path.join(root, 'equipment', 'catalog.json'),
@@ -55,6 +67,35 @@ async function setupFixture() {
     ),
   )
   return root
+}
+
+async function writeScene(
+  root: string,
+  devices: Array<{
+    id: string
+    type: string
+    name: string
+    assetId: string
+    position: [number, number, number]
+    rotation: [number, number, number]
+    system: string
+    tags: string[]
+    boundsHalfExtents: [number, number, number]
+  }>,
+) {
+  await writeFile(
+    path.join(root, 'scene', 'current.scene.json'),
+    JSON.stringify(
+      {
+        version: 1,
+        devices,
+        portGroups: devices.map((device) => ({ deviceId: device.id, ports: [] })),
+        pipes: [],
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 async function performRequest(
@@ -98,8 +139,20 @@ test('GET /api/scene returns the current scene file', async () => {
   assert.equal(res.statusCode, 200)
   assert.deepEqual(res._getJSONData(), {
     version: 1,
-    devices: [],
-    portGroups: [],
+    devices: [
+      {
+        id: 'CHW-PUMP-1',
+        type: 'pump',
+        name: 'CHW Pump 1',
+        assetId: 'chw_pump_v1',
+        position: [0, 0.35, 0],
+        rotation: [0, 0, 0],
+        system: 'CHW',
+        tags: [],
+        boundsHalfExtents: [0.35, 0.35, 0.35],
+      },
+    ],
+    portGroups: [{ deviceId: 'CHW-PUMP-1', ports: [] }],
     pipes: [],
   })
 })
@@ -168,4 +221,208 @@ test('GET /api/equipment/:assetId and ports return persisted asset files', async
   assert.equal(assetRes._getJSONData().assetId, 'chw_pump_v1')
   assert.equal(portsRes.statusCode, 200)
   assert.equal(portsRes._getJSONData().ports.length, 2)
+})
+
+test('GET /api/runtime/overview returns runtime summary fields', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/overview')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(typeof body.totalPower, 'number')
+  assert.equal(typeof body.avgCop, 'number')
+  assert.equal(typeof body.activeAlarmCount, 'number')
+  assert.equal(typeof body.lastUpdatedAt, 'string')
+  assert.match(body.lastUpdatedAt, /^\d{4}-\d{2}-\d{2}T/)
+})
+
+test('GET /api/runtime/overview is stable for the same scene', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const first = await performRequest(app, 'GET', '/api/runtime/overview')
+  const second = await performRequest(app, 'GET', '/api/runtime/overview')
+
+  assert.equal(first.statusCode, 200)
+  assert.equal(second.statusCode, 200)
+  assert.deepEqual(first._getJSONData(), second._getJSONData())
+})
+
+test('GET /api/runtime/devices/:deviceId returns runtime detail fields', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-1')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(body.deviceId, 'CHW-PUMP-1')
+  assert.equal(body.deviceName, 'CHW Pump 1')
+  assert.equal(body.system, 'CHW')
+  assert.equal(typeof body.updatedAt, 'string')
+  assert.ok(Array.isArray(body.points))
+  assert.ok(Array.isArray(body.alarms))
+  assert.ok(Array.isArray(body.trend))
+  assert.ok(['online', 'offline', 'degraded'].includes(body.onlineStatus))
+  assert.equal(body.points.length > 0, true)
+  assert.equal(body.trend.length > 0, true)
+  assert.equal(typeof body.points[0].value, 'number')
+  assert.equal(typeof body.trend[0].v, 'number')
+})
+
+test('GET /api/runtime/devices/:deviceId reflects the current scene inventory', async () => {
+  const dataRoot = await setupFixture()
+  await writeFile(
+    path.join(dataRoot, 'scene', 'current.scene.json'),
+    JSON.stringify(
+      {
+        version: 1,
+        devices: [
+          {
+            id: 'CHW-PUMP-2',
+            type: 'pump',
+            name: 'CHW Pump 2',
+            assetId: 'chw_pump_v1',
+            position: [1, 0.35, 0],
+            rotation: [0, 0, 0],
+            system: 'CHW',
+            tags: [],
+            boundsHalfExtents: [0.35, 0.35, 0.35],
+          },
+        ],
+        portGroups: [{ deviceId: 'CHW-PUMP-2', ports: [] }],
+        pipes: [],
+      },
+      null,
+      2,
+    ),
+  )
+
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-2')
+
+  assert.equal(res.statusCode, 200)
+  const body = res._getJSONData()
+  assert.equal(body.deviceId, 'CHW-PUMP-2')
+  assert.equal(body.deviceName, 'CHW Pump 2')
+  assert.equal(body.system, 'CHW')
+})
+
+test('GET /api/runtime/devices/UNKNOWN returns not found', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+  const res = await performRequest(app, 'GET', '/api/runtime/devices/UNKNOWN')
+
+  assert.equal(res.statusCode, 404)
+  assert.equal(res._getJSONData().ok, false)
+})
+
+test('GET /api/runtime/overview is derived from generated scene device runtimes', async () => {
+  const dataRoot = await setupFixture()
+  await writeScene(dataRoot, [
+    {
+      id: 'CH-01',
+      type: 'chiller',
+      name: '1#离心机组',
+      assetId: 'chiller_centrifugal_v1',
+      position: [0, 1, 0],
+      rotation: [0, 0, 0],
+      system: 'CHW',
+      tags: [],
+      boundsHalfExtents: [1, 1, 1],
+    },
+    {
+      id: 'PUMP-01',
+      type: 'pump',
+      name: '1#冷冻泵',
+      assetId: 'chw_pump_v1',
+      position: [1, 0.35, 0],
+      rotation: [0, 0, 0],
+      system: 'CHW',
+      tags: [],
+      boundsHalfExtents: [0.35, 0.35, 0.35],
+    },
+  ])
+  const app = createApp({ dataRoot })
+
+  const overviewRes = await performRequest(app, 'GET', '/api/runtime/overview')
+  const chillerRes = await performRequest(app, 'GET', '/api/runtime/devices/CH-01')
+  const pumpRes = await performRequest(app, 'GET', '/api/runtime/devices/PUMP-01')
+
+  assert.equal(overviewRes.statusCode, 200)
+  assert.equal(chillerRes.statusCode, 200)
+  assert.equal(pumpRes.statusCode, 200)
+
+  const overview = overviewRes._getJSONData()
+  const chiller = chillerRes._getJSONData()
+  const pump = pumpRes._getJSONData()
+  const expectedTotalPower =
+    chiller.points.find((point: { id: string; value: number }) => point.id === 'power').value +
+    pump.points.find((point: { id: string; value: number }) => point.id === 'power').value
+  const copPoints = [chiller, pump]
+    .flatMap((runtime) => runtime.points.filter((point: { id: string }) => point.id === 'cop'))
+    .map((point: { value: number }) => point.value)
+  const expectedCop = Math.round((copPoints.reduce((sum: number, value: number) => sum + value, 0) / copPoints.length) * 100) / 100
+  const expectedAlarmCount = chiller.alarms.length + pump.alarms.length
+
+  assert.equal(overview.totalPower, expectedTotalPower)
+  assert.equal(overview.avgCop, expectedCop)
+  assert.equal(overview.activeAlarmCount, expectedAlarmCount)
+})
+
+test('GET /api/runtime uses snapshot override when runtime snapshot exists', async () => {
+  const dataRoot = await setupFixture()
+  await mkdir(path.join(dataRoot, 'runtime'), { recursive: true })
+  await writeFile(
+    path.join(dataRoot, 'runtime', 'snapshot.json'),
+    JSON.stringify(
+      {
+        overview: {
+          totalPower: 999,
+          avgCop: 6.66,
+          activeAlarmCount: 2,
+          lastUpdatedAt: '2026-04-02T00:00:00.000Z',
+        },
+        devices: {
+          'CHW-PUMP-1': {
+            deviceId: 'CHW-PUMP-1',
+            deviceName: 'Snapshot Pump',
+            system: 'CHW',
+            onlineStatus: 'degraded',
+            updatedAt: '2026-04-02T00:00:00.000Z',
+            points: [{ id: 'power', name: 'Power', value: 99.9, unit: 'kW', quality: 'stale' }],
+            alarms: [{ id: 'SNAP-1', level: 'critical', message: 'Snapshot alarm', time: '2026-04-02T00:00:00.000Z' }],
+            trend: [{ t: '2026-04-02T00:00:00.000Z', v: 99.9 }],
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  )
+  const app = createApp({ dataRoot })
+
+  const overviewRes = await performRequest(app, 'GET', '/api/runtime/overview')
+  const detailRes = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-1')
+
+  assert.equal(overviewRes.statusCode, 200)
+  assert.equal(detailRes.statusCode, 200)
+  assert.equal(overviewRes._getJSONData().totalPower, 999)
+  assert.equal(overviewRes._getJSONData().avgCop, 6.66)
+  assert.equal(detailRes._getJSONData().deviceName, 'Snapshot Pump')
+  assert.equal(detailRes._getJSONData().onlineStatus, 'degraded')
+  assert.equal(detailRes._getJSONData().points[0].quality, 'stale')
+})
+
+test('GET /api/runtime falls back to generated data when no snapshot exists', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const overviewRes = await performRequest(app, 'GET', '/api/runtime/overview')
+  const detailRes = await performRequest(app, 'GET', '/api/runtime/devices/CHW-PUMP-1')
+
+  assert.equal(overviewRes.statusCode, 200)
+  assert.equal(detailRes.statusCode, 200)
+  assert.notEqual(overviewRes._getJSONData().totalPower, 999)
+  assert.notEqual(detailRes._getJSONData().deviceName, 'Snapshot Pump')
 })

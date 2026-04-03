@@ -1,53 +1,133 @@
-import test from 'node:test'
 import assert from 'node:assert/strict'
+import test from 'node:test'
 
-import type { Device } from '@/schemas/device'
-import { useRuntimeStore } from './runtimeStore.ts'
+import type { DeviceRuntime, RuntimeOverview } from '../schemas/deviceRuntime.ts'
+import { createRuntimeStore } from './runtimeStore.ts'
 
-function makeDevice(overrides: Partial<Device>): Device {
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+function makeOverview(overrides: Partial<RuntimeOverview> = {}): RuntimeOverview {
   return {
-    id: 'CH-01',
-    type: 'chiller',
-    name: '1#离心机组',
-    assetId: 'chiller_centrifugal_v1',
-    position: [0, 1, 0],
-    rotation: [0, 0, 0],
-    system: 'CHW',
-    tags: [],
-    boundsHalfExtents: [1, 1, 1],
+    totalPower: 512.4,
+    avgCop: 5.23,
+    activeAlarmCount: 2,
+    lastUpdatedAt: '2026-04-02T00:00:00.000Z',
     ...overrides,
   }
 }
 
-test('runtime store refreshes runtimes and aggregates summary metrics', () => {
-  const devices: Device[] = [
-    makeDevice({ id: 'CH-01', type: 'chiller', name: '1#离心机组' }),
-    makeDevice({ id: 'PUMP-01', type: 'pump', name: '1#冷冻泵', assetId: 'chw_pump_v1' }),
-  ]
+function makeRuntime(overrides: Partial<DeviceRuntime> = {}): DeviceRuntime {
+  return {
+    deviceId: 'CH-01',
+    deviceName: '1#离心机组',
+    system: 'CHW',
+    onlineStatus: 'online',
+    updatedAt: '2026-04-02T00:00:00.000Z',
+    points: [{ id: 'power', name: 'Power', value: 420, unit: 'kW', quality: 'good' }],
+    trend: [{ t: '2026-04-02T00:00:00.000Z', v: 420 }],
+    alarms: [],
+    runMode: 'AI_OPT',
+    runModeDescription: 'mock',
+    strategyHint: 'hint',
+    aiSuggestion: 'suggestion',
+    ...overrides,
+  }
+}
 
-  const store = useRuntimeStore.getState()
-  store.refreshRuntimes(devices)
+test('runtime store fetchOverview stores overview payload and summary fields', async () => {
+  const pending = deferred<RuntimeOverview>()
+  const store = createRuntimeStore({
+    getRuntimeOverview: () => pending.promise,
+    getDeviceRuntime: async () => makeRuntime(),
+  })
 
-  const next = useRuntimeStore.getState()
-  const chillerRuntime = next.getDeviceRuntime('CH-01')
-  const pumpRuntime = next.getDeviceRuntime('PUMP-01')
+  const fetchPromise = store.getState().fetchOverview()
+  assert.equal(store.getState().loadingOverview, true)
+  assert.equal(store.getState().overviewError, null)
 
-  assert.ok(chillerRuntime)
-  assert.ok(pumpRuntime)
-  assert.equal(next.runtimes.size, 2)
-  assert.ok(next.totalPower > 0)
-  assert.ok(next.avgCop > 0)
-  assert.equal(next.activeAlarmCount, next.globalAlarms.length)
-  assert.match(next.lastUpdatedAt ?? '', /^\d{2}:\d{2}:\d{2}$/)
+  pending.resolve(makeOverview())
+  await fetchPromise
+
+  const next = store.getState()
+  assert.deepEqual(next.overview, makeOverview())
+  assert.equal(next.totalPower, 512.4)
+  assert.equal(next.avgCop, 5.23)
+  assert.equal(next.activeAlarmCount, 2)
+  assert.equal(next.loadingOverview, false)
+  assert.equal(next.overviewError, null)
+  assert.equal(typeof next.lastFetchedAt, 'string')
 })
 
-test('runtime store clears runtime summary when given an empty device list', () => {
-  useRuntimeStore.getState().refreshRuntimes([])
+test('runtime store fetchDeviceRuntime caches device payload by id and reuses cached values', async () => {
+  let calls = 0
+  const store = createRuntimeStore({
+    getRuntimeOverview: async () => makeOverview(),
+    getDeviceRuntime: async (deviceId) => {
+      calls += 1
+      return makeRuntime({
+        deviceId,
+        deviceName: '1#冷冻泵',
+        system: 'CHW',
+        onlineStatus: 'degraded',
+      })
+    },
+  })
 
-  const next = useRuntimeStore.getState()
-  assert.equal(next.runtimes.size, 0)
-  assert.equal(next.totalPower, 0)
-  assert.equal(next.avgCop, 0)
-  assert.equal(next.activeAlarmCount, 0)
-  assert.deepEqual(next.globalAlarms, [])
+  const first = await store.getState().fetchDeviceRuntime('PUMP-01')
+  const second = await store.getState().fetchDeviceRuntime('PUMP-01')
+
+  const next = store.getState()
+  assert.equal(calls, 1)
+  assert.deepEqual(first, second)
+  assert.equal(next.loadingDeviceIds.has('PUMP-01'), false)
+  assert.equal(next.deviceErrorById.get('PUMP-01') ?? null, null)
+  assert.equal(next.deviceRuntimeById.get('PUMP-01')?.deviceName, '1#冷冻泵')
+  assert.equal(next.getDeviceRuntime('PUMP-01')?.onlineStatus, 'degraded')
+})
+
+test('runtime store records overview errors from the runtime api', async () => {
+  const store = createRuntimeStore({
+    getRuntimeOverview: async () => {
+      throw new Error('overview failed')
+    },
+    getDeviceRuntime: async () => makeRuntime(),
+  })
+
+  await assert.rejects(() => store.getState().fetchOverview(), /overview failed/)
+
+  const next = store.getState()
+  assert.equal(next.overviewError, 'overview failed')
+  assert.equal(next.loadingOverview, false)
+})
+
+test('runtime store clears device fetch errors after a successful retry', async () => {
+  let shouldFail = true
+  const store = createRuntimeStore({
+    getRuntimeOverview: async () => makeOverview(),
+    getDeviceRuntime: async (deviceId) => {
+      if (shouldFail) {
+        throw new Error(`runtime unavailable for ${deviceId}`)
+      }
+      return makeRuntime({ deviceId })
+    },
+  })
+
+  await assert.rejects(() => store.getState().fetchDeviceRuntime('CH-01', { force: true }), /runtime unavailable/)
+  assert.equal(store.getState().loadingDeviceIds.has('CH-01'), false)
+  assert.match(store.getState().deviceErrorById.get('CH-01') ?? '', /runtime unavailable/)
+
+  shouldFail = false
+  await store.getState().fetchDeviceRuntime('CH-01', { force: true })
+
+  const next = store.getState()
+  assert.equal(next.deviceErrorById.get('CH-01') ?? null, null)
+  assert.equal(next.deviceRuntimeById.get('CH-01')?.deviceId, 'CH-01')
 })

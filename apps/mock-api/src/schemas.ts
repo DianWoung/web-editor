@@ -62,4 +62,50 @@ export const portsFileSchema = z.object({
   ports: z.array(portSchema),
 })
 
+export const runtimeOverviewSchema = z.object({
+  totalPower: z.number(),
+  avgCop: z.number(),
+  activeAlarmCount: z.number().int(),
+  lastUpdatedAt: z.string().min(1).nullable(),
+})
+
+export const runtimePointSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  value: z.number(),
+  unit: z.string(),
+  quality: z.enum(['good', 'bad', 'stale']),
+})
+
+export const runtimeAlarmSchema = z.object({
+  id: z.string().min(1),
+  level: z.enum(['warning', 'critical']),
+  message: z.string().min(1),
+  time: z.string().min(1),
+})
+
+export const runtimeTrendPointSchema = z.object({
+  t: z.string().min(1),
+  v: z.number(),
+})
+
+export const runtimeDeviceSchema = z.object({
+  deviceId: z.string().min(1),
+  deviceName: z.string().min(1),
+  system: z.string().min(1),
+  onlineStatus: z.enum(['online', 'offline', 'degraded']),
+  updatedAt: z.string().min(1),
+  points: z.array(runtimePointSchema),
+  alarms: z.array(runtimeAlarmSchema),
+  trend: z.array(runtimeTrendPointSchema),
+})
+
+export const runtimeSnapshotSchema = z.object({
+  overview: runtimeOverviewSchema.optional(),
+  devices: z.record(z.string().min(1), runtimeDeviceSchema).default({}),
+})
+
 export type SceneFile = z.infer<typeof sceneFileSchema>
+export type RuntimeDevice = z.infer<typeof runtimeDeviceSchema>
+export type RuntimeOverview = z.infer<typeof runtimeOverviewSchema>
+export type RuntimeSnapshot = z.infer<typeof runtimeSnapshotSchema>

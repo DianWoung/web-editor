@@ -3,6 +3,7 @@ import express from 'express'
 import { getErrorMessage, HttpError } from './lib/httpErrors.ts'
 import { createEquipmentRouter } from './routes/equipment.ts'
 import { healthRouter } from './routes/health.ts'
+import { createRuntimeRouter } from './routes/runtime.ts'
 import { createSceneRouter } from './routes/scene.ts'
 
 export type MockApiAppOptions = {
@@ -16,6 +17,7 @@ export function createApp(_options: MockApiAppOptions) {
   app.use('/api/health', healthRouter)
   app.use('/api/scene', createSceneRouter(dataRoot))
   app.use('/api/equipment', createEquipmentRouter(dataRoot))
+  app.use('/api/runtime', createRuntimeRouter(dataRoot))
   app.use('/api', (_req, res) => {
     res.status(404).json({ ok: false, error: 'Not Found' })
   })

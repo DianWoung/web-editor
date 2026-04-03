@@ -1,69 +1,162 @@
 import { create } from 'zustand'
+import { createStore } from 'zustand/vanilla'
 
 import type { Device } from '../schemas/device.ts'
-import type { AlarmRow, DeviceRuntimeMock } from '../schemas/deviceRuntime.ts'
-import { getMockDeviceRuntime } from '../services/mockDeviceRuntime.ts'
+import type { DeviceRuntime, RuntimeOverview } from '../schemas/deviceRuntime.ts'
+import { runtimeApi, type RuntimeApiClient } from '../services/api/runtimeApi.ts'
 
 type RuntimeState = {
-  runtimes: Map<string, DeviceRuntimeMock>
-  globalAlarms: AlarmRow[]
+  overview: RuntimeOverview | null
+  deviceRuntimeById: Map<string, DeviceRuntime>
+  runtimes: Map<string, DeviceRuntime>
   totalPower: number
   avgCop: number
   activeAlarmCount: number
   lastUpdatedAt: string | null
+  loadingOverview: boolean
+  loadingDeviceIds: Set<string>
+  overviewError: string | null
+  deviceErrorById: Map<string, string>
+  lastFetchedAt: string | null
 }
 
 type RuntimeActions = {
-  refreshRuntimes: (devices: Device[]) => void
-  getDeviceRuntime: (deviceId: string) => DeviceRuntimeMock | undefined
+  fetchOverview: () => Promise<RuntimeOverview>
+  fetchDeviceRuntime: (deviceId: string, options?: { force?: boolean }) => Promise<DeviceRuntime>
+  refreshRuntimes: (devices: Device[]) => Promise<void>
+  getDeviceRuntime: (deviceId: string) => DeviceRuntime | undefined
   clear: () => void
 }
 
-const initialState: RuntimeState = {
-  runtimes: new Map(),
-  globalAlarms: [],
-  totalPower: 0,
-  avgCop: 0,
-  activeAlarmCount: 0,
-  lastUpdatedAt: null,
+export type RuntimeStoreState = RuntimeState & RuntimeActions
+
+function createInitialState(): RuntimeState {
+  const deviceRuntimeById = new Map<string, DeviceRuntime>()
+
+  return {
+    overview: null,
+    deviceRuntimeById,
+    runtimes: deviceRuntimeById,
+    totalPower: 0,
+    avgCop: 0,
+    activeAlarmCount: 0,
+    lastUpdatedAt: null,
+    loadingOverview: false,
+    loadingDeviceIds: new Set(),
+    overviewError: null,
+    deviceErrorById: new Map(),
+    lastFetchedAt: null,
+  }
 }
 
-export const useRuntimeStore = create<RuntimeState & RuntimeActions>((set, get) => ({
-  ...initialState,
+function buildRuntimeStore(api: RuntimeApiClient) {
+  return (set: (partial: RuntimeStoreState | Partial<RuntimeStoreState> | ((state: RuntimeStoreState) => RuntimeStoreState | Partial<RuntimeStoreState>), replace?: false) => void, get: () => RuntimeStoreState): RuntimeStoreState => ({
+    ...createInitialState(),
 
-  refreshRuntimes: (devices) => {
-    const runtimes = new Map<string, DeviceRuntimeMock>()
-    const globalAlarms: AlarmRow[] = []
-    let totalPower = 0
-    let copTotal = 0
-    let copCount = 0
+    fetchOverview: async () => {
+      set({ loadingOverview: true, overviewError: null })
 
-    devices.forEach((device) => {
-      const runtime = getMockDeviceRuntime(device)
-      runtimes.set(device.id, runtime)
-      globalAlarms.push(...runtime.alarms)
-
-      const powerPoint = runtime.points.find((point) => point.id === 'power')
-      if (powerPoint) totalPower += powerPoint.value
-
-      const copPoint = runtime.points.find((point) => point.id === 'cop')
-      if (copPoint) {
-        copTotal += copPoint.value
-        copCount += 1
+      try {
+        const overview = await api.getRuntimeOverview()
+        set({
+          overview,
+          totalPower: overview.totalPower,
+          avgCop: overview.avgCop,
+          activeAlarmCount: overview.activeAlarmCount,
+          lastUpdatedAt: overview.lastUpdatedAt,
+          loadingOverview: false,
+          overviewError: null,
+          lastFetchedAt: new Date().toISOString(),
+        })
+        return overview
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        set({
+          loadingOverview: false,
+          overviewError: message,
+        })
+        throw error
       }
-    })
+    },
 
-    set({
-      runtimes,
-      globalAlarms,
-      totalPower: Math.round(totalPower * 10) / 10,
-      avgCop: copCount > 0 ? Math.round((copTotal / copCount) * 100) / 100 : 0,
-      activeAlarmCount: globalAlarms.length,
-      lastUpdatedAt: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
-    })
-  },
+    fetchDeviceRuntime: async (deviceId, options) => {
+      const cached = get().deviceRuntimeById.get(deviceId)
+      if (cached && !options?.force) {
+        return cached
+      }
 
-  getDeviceRuntime: (deviceId) => get().runtimes.get(deviceId),
+      set((state) => {
+        const loadingDeviceIds = new Set(state.loadingDeviceIds)
+        loadingDeviceIds.add(deviceId)
 
-  clear: () => set(initialState),
-}))
+        const deviceErrorById = new Map(state.deviceErrorById)
+        deviceErrorById.delete(deviceId)
+
+        return {
+          loadingDeviceIds,
+          deviceErrorById,
+        }
+      })
+
+      try {
+        const runtime = await api.getDeviceRuntime(deviceId)
+        set((state) => {
+          const deviceRuntimeById = new Map(state.deviceRuntimeById)
+          deviceRuntimeById.set(deviceId, runtime)
+
+          const loadingDeviceIds = new Set(state.loadingDeviceIds)
+          loadingDeviceIds.delete(deviceId)
+
+          const deviceErrorById = new Map(state.deviceErrorById)
+          deviceErrorById.delete(deviceId)
+
+          return {
+            deviceRuntimeById,
+            runtimes: deviceRuntimeById,
+            loadingDeviceIds,
+            deviceErrorById,
+            lastFetchedAt: new Date().toISOString(),
+          }
+        })
+        return runtime
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        set((state) => {
+          const loadingDeviceIds = new Set(state.loadingDeviceIds)
+          loadingDeviceIds.delete(deviceId)
+
+          const deviceErrorById = new Map(state.deviceErrorById)
+          deviceErrorById.set(deviceId, message)
+
+          return {
+            loadingDeviceIds,
+            deviceErrorById,
+          }
+        })
+        throw error
+      }
+    },
+
+    refreshRuntimes: async (devices) => {
+      if (devices.length === 0) {
+        get().clear()
+        return
+      }
+
+      await Promise.allSettled([
+        get().fetchOverview(),
+        ...devices.map((device) => get().fetchDeviceRuntime(device.id, { force: true })),
+      ])
+    },
+
+    getDeviceRuntime: (deviceId) => get().deviceRuntimeById.get(deviceId),
+
+    clear: () => set(createInitialState()),
+  })
+}
+
+export function createRuntimeStore(api: RuntimeApiClient = runtimeApi) {
+  return createStore<RuntimeStoreState>(buildRuntimeStore(api))
+}
+
+export const useRuntimeStore = create<RuntimeStoreState>(buildRuntimeStore(runtimeApi))

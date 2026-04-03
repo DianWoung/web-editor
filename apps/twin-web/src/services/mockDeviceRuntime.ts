@@ -53,6 +53,8 @@ export function getMockDeviceRuntime(device: Device): DeviceRuntimeMock {
     deviceId: device.id,
     deviceName: device.name,
     system: device.system,
+    onlineStatus: 'online',
+    updatedAt: new Date().toISOString(),
     points,
     trend: buildTrend(seed, isChiller ? baseTemp : power),
     alarms,
