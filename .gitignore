@@ -22,4 +22,5 @@ pnpm-debug.log*
 .env
 .env.*
 .alma-snapshots
+.superpowers
 .worktrees
