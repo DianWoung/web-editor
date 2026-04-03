@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
 import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
 import { useRuntimePolling } from '@/hooks/useRuntimePolling'
+import { createDeviceDetailPollTask } from '@/pages/detail/deviceRuntimePolling'
 import { useSceneStore } from '@/store/sceneStore'
 import { useRuntimeStore } from '@/store/runtimeStore'
 
@@ -37,9 +38,7 @@ export function DeviceDetailPage() {
     }
   }, [devices.length])
 
-  useRuntimePolling(async () => {
-    await fetchDeviceRuntime(deviceId, { force: true })
-  }, 10_000, deviceId.length > 0 && devices.length > 0)
+  useRuntimePolling(createDeviceDetailPollTask(fetchDeviceRuntime, deviceId), 10_000, deviceId.length > 0 && devices.length > 0)
 
   if (loadingScene) {
     return (

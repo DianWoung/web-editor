@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
+import { createDeviceDetailPollTask } from '../pages/detail/deviceRuntimePolling.ts'
 import type { DeviceRuntime, RuntimeOverview } from '../schemas/deviceRuntime.ts'
 import { createRuntimeStore } from './runtimeStore.ts'
 
@@ -134,9 +133,18 @@ test('runtime store clears device fetch errors after a successful retry', async 
   assert.equal(next.deviceRuntimeById.get('CH-01')?.deviceId, 'CH-01')
 })
 
-test('device detail polling forces runtime refetches instead of reusing cache', async () => {
-  const detailPagePath = fileURLToPath(new URL('../pages/detail/DeviceDetailPage.tsx', import.meta.url))
-  const source = await readFile(detailPagePath, 'utf8')
+test('device detail polling task forces runtime refetches on every tick', async () => {
+  const calls: Array<{ deviceId: string; options?: { force?: boolean } }> = []
+  const task = createDeviceDetailPollTask(async (deviceId, options) => {
+    calls.push({ deviceId, options })
+    return makeRuntime({ deviceId })
+  }, 'CH-01')
 
-  assert.match(source, /fetchDeviceRuntime\(deviceId,\s*\{\s*force:\s*true\s*\}\)/)
+  await task()
+  await task()
+
+  assert.deepEqual(calls, [
+    { deviceId: 'CH-01', options: { force: true } },
+    { deviceId: 'CH-01', options: { force: true } },
+  ])
 })
