@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 
 import type { DeviceRuntime, RuntimeOverview } from '../schemas/deviceRuntime.ts'
@@ -130,4 +132,11 @@ test('runtime store clears device fetch errors after a successful retry', async 
   const next = store.getState()
   assert.equal(next.deviceErrorById.get('CH-01') ?? null, null)
   assert.equal(next.deviceRuntimeById.get('CH-01')?.deviceId, 'CH-01')
+})
+
+test('device detail polling forces runtime refetches instead of reusing cache', async () => {
+  const detailPagePath = fileURLToPath(new URL('../pages/detail/DeviceDetailPage.tsx', import.meta.url))
+  const source = await readFile(detailPagePath, 'utf8')
+
+  assert.match(source, /fetchDeviceRuntime\(deviceId,\s*\{\s*force:\s*true\s*\}\)/)
 })

@@ -38,7 +38,7 @@ export function DeviceDetailPage() {
   }, [devices.length])
 
   useRuntimePolling(async () => {
-    await fetchDeviceRuntime(deviceId)
+    await fetchDeviceRuntime(deviceId, { force: true })
   }, 10_000, deviceId.length > 0 && devices.length > 0)
 
   if (loadingScene) {
