@@ -8,6 +8,7 @@ import { AnimationMixer, Box3, Vector3 } from 'three'
 import type { Group } from 'three'
 import type { Device } from '@/schemas/device'
 import type { PortDef } from '@/schemas/port'
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 import { eulerDegToThreeEuler, eulerThreeToDegTuple } from '@/utils/degrees'
 import { PortMarker } from '@/components/scene/PortMarker'
@@ -48,13 +49,13 @@ export function DeviceInstance({
   const [glbScene, setGlbScene] = useState<Group | null>(null)
   const [glbFailed, setGlbFailed] = useState(false)
   const selection = useSceneStore((s) => s.selection)
-  const transformMode = useSceneStore((s) => s.editorUi.transformMode)
-  const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
+  const transformMode = useEditorUiStore((s) => s.transformMode)
+  const wireFrom = useEditorUiStore((s) => s.wireFrom)
   const setSelection = useSceneStore((s) => s.setSelection)
-  const setWireFrom = useSceneStore((s) => s.setWireFrom)
+  const setWireFrom = useEditorUiStore((s) => s.setWireFrom)
   const tryConnectPorts = useSceneStore((s) => s.tryConnectPorts)
   const updateDeviceTransform = useSceneStore((s) => s.updateDeviceTransform)
-  const setError = useSceneStore((s) => s.setError)
+  const setError = useEditorUiStore((s) => s.setError)
 
   const isDeviceSelected = selection?.kind === 'device' && selection.deviceId === device.id
   const shouldSpinWithFlow = isFlowDrivenWindTurbine(device.assetId)

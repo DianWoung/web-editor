@@ -5,6 +5,7 @@ import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
 import { PipeRun } from '@/components/scene/PipeRun'
 import { RoomFloor } from '@/components/scene/RoomFloor'
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
@@ -13,7 +14,7 @@ import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
 function EditorOrbitControls() {
   /** drei 使用 three-stdlib 的 OrbitControls，与 @types/three 示例路径类型不兼容，仅依赖 reset() */
   const ref = useRef<{ reset: () => void } | null>(null)
-  const nonce = useSceneStore((s) => s.editorUi.cameraResetNonce)
+  const nonce = useEditorUiStore((s) => s.cameraResetNonce)
   useEffect(() => {
     if (nonce === 0) return
     ref.current?.reset()
@@ -48,10 +49,10 @@ export function EditorCanvas({
   const portGroups = useSceneStore((s) => s.portGroups)
   const pipes = useSceneStore((s) => s.pipes)
   const selection = useSceneStore((s) => s.selection)
-  const showGrid = useSceneStore((s) => s.editorUi.showGrid)
-  const showPipes = useSceneStore((s) => s.editorUi.showPipes)
-  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
-  const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
+  const showGrid = useEditorUiStore((s) => s.showGrid)
+  const showPipes = useEditorUiStore((s) => s.showPipes)
+  const flowEnabled = useEditorUiStore((s) => s.flowEnabled)
+  const wireFrom = useEditorUiStore((s) => s.wireFrom)
   const setSelection = useSceneStore((s) => s.setSelection)
 
   const selectedPipeId = selection?.kind === 'pipe' ? selection.pipeId : null

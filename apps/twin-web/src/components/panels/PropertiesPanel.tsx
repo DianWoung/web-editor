@@ -1,16 +1,16 @@
+import { useEditorUiStore, type SnapGridOption } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
-import type { SnapGridOption } from '@/store/sceneStore'
 
 export function PropertiesPanel() {
   const devices = useSceneStore((s) => s.devices)
   const pipes = useSceneStore((s) => s.pipes)
   const selection = useSceneStore((s) => s.selection)
-  const transformMode = useSceneStore((s) => s.editorUi.transformMode)
-  const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
-  const snapGrid = useSceneStore((s) => s.editorUi.snapGrid)
-  const setTransformMode = useSceneStore((s) => s.setTransformMode)
-  const setWireFrom = useSceneStore((s) => s.setWireFrom)
-  const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
+  const transformMode = useEditorUiStore((s) => s.transformMode)
+  const wireFrom = useEditorUiStore((s) => s.wireFrom)
+  const snapGrid = useEditorUiStore((s) => s.snapGrid)
+  const setTransformMode = useEditorUiStore((s) => s.setTransformMode)
+  const setWireFrom = useEditorUiStore((s) => s.setWireFrom)
+  const setSnapGrid = useEditorUiStore((s) => s.setSnapGrid)
   const updateDeviceTransform = useSceneStore((s) => s.updateDeviceTransform)
   const updateDeviceName = useSceneStore((s) => s.updateDeviceName)
   const updateDeviceSystem = useSceneStore((s) => s.updateDeviceSystem)

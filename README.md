@@ -43,6 +43,11 @@ Workspace-specific test commands:
 ```bash
 npm test -w twin-web
 npm test -w mock-api
+
+# repo-level verification
+npm run lint
+npm run test
+npm run check
 ```
 
 ## Runtime Data Flow

@@ -1,14 +1,12 @@
 import { create } from 'zustand'
+
 import type { Device } from '@/schemas/device'
 import type { Pipe } from '@/schemas/pipe'
 import type { PortGroup } from '@/schemas/port'
 import { formatSceneParseError, parseSceneJson, type SceneFile } from '@/schemas/scene'
 import type { CatalogAsset } from '@/services/loadEquipmentCatalog'
-import { parsePipeEndpoint, pipeSegmentsCollideDevices } from '@/services/pipeCollision'
-import { buildOrthogonalRoute } from '@/services/orthogonalRoute'
-import { getPortWorldPosition } from '@/utils/portWorld'
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { snapVec3 } from '@/utils/snap'
-import { Vector3 } from 'three'
 import { TRUNK_Y } from '@/constants/trunk'
 
 export type Selection =
@@ -17,41 +15,16 @@ export type Selection =
   | { kind: 'pipe'; pipeId: string }
   | null
 
-export type TransformMode = 'translate' | 'rotate'
-
-export type SnapGridOption = 0 | 0.25 | 0.5 | 1
-
 type SceneState = {
   version: number
   devices: Device[]
   portGroups: PortGroup[]
   pipes: Pipe[]
   selection: Selection
-  editorUi: {
-    wireFrom: { deviceId: string; portId: string } | null
-    transformMode: TransformMode
-    lastError: string | null
-    showGrid: boolean
-    showPipes: boolean
-    snapGrid: SnapGridOption
-    /** 递增以触发编排画布 OrbitControls.reset（初始 0 不触发） */
-    cameraResetNonce: number
-    /** 运行态开关：让管线展示“流动”虚线效果 */
-    flowEnabled: boolean
-  }
 }
 
 type SceneActions = {
-  clearError: () => void
-  setError: (msg: string | null) => void
-  setSelection: (s: Selection) => void
-  setTransformMode: (m: TransformMode) => void
-  setWireFrom: (v: { deviceId: string; portId: string } | null) => void
-  setShowGrid: (v: boolean) => void
-  setShowPipes: (v: boolean) => void
-  setSnapGrid: (g: SnapGridOption) => void
-  requestEditorCameraReset: () => void
-  setFlowEnabled: (v: boolean) => void
+  setSelection: (selection: Selection) => void
   loadScene: (scene: SceneFile) => void
   clearScene: () => void
   addDeviceFromAsset: (asset: CatalogAsset, position?: [number, number, number]) => void
@@ -79,15 +52,10 @@ function newPipeId() {
   return `PIPE-${crypto.randomUUID().slice(0, 8)}`
 }
 
-const editorUiDefaults = {
-  wireFrom: null as { deviceId: string; portId: string } | null,
-  transformMode: 'translate' as TransformMode,
-  lastError: null as string | null,
-  showGrid: true,
-  showPipes: true,
-  snapGrid: 0 as SnapGridOption,
-  cameraResetNonce: 0,
-  flowEnabled: false,
+function parsePipeEndpointRef(ref: string): { deviceId: string; portId: string } | null {
+  const [deviceId, portId] = ref.split('.')
+  if (!deviceId || !portId) return null
+  return { deviceId, portId }
 }
 
 const initial: SceneState = {
@@ -96,50 +64,35 @@ const initial: SceneState = {
   portGroups: [],
   pipes: [],
   selection: null,
-  editorUi: { ...editorUiDefaults },
 }
 
 export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
   ...initial,
 
-  clearError: () =>
-    set((s) => ({ editorUi: { ...s.editorUi, lastError: null } })),
-  setError: (msg) =>
-    set((s) => ({ editorUi: { ...s.editorUi, lastError: msg } })),
-
   setSelection: (selection) => set({ selection }),
-  setTransformMode: (transformMode) =>
-    set((s) => ({ editorUi: { ...s.editorUi, transformMode } })),
-  setWireFrom: (wireFrom) => set((s) => ({ editorUi: { ...s.editorUi, wireFrom } })),
-  setShowGrid: (showGrid) => set((s) => ({ editorUi: { ...s.editorUi, showGrid } })),
-  setShowPipes: (showPipes) => set((s) => ({ editorUi: { ...s.editorUi, showPipes } })),
-  setSnapGrid: (snapGrid) => set((s) => ({ editorUi: { ...s.editorUi, snapGrid } })),
-  requestEditorCameraReset: () =>
-    set((s) => ({
-      editorUi: { ...s.editorUi, cameraResetNonce: s.editorUi.cameraResetNonce + 1 },
-    })),
-  setFlowEnabled: (flowEnabled) => set((s) => ({ editorUi: { ...s.editorUi, flowEnabled } })),
 
-  loadScene: (scene) =>
+  loadScene: (scene) => {
+    useEditorUiStore.getState().resetTransientState()
     set({
       version: scene.version,
       devices: scene.devices,
       portGroups: scene.portGroups,
       pipes: scene.pipes,
       selection: null,
-      editorUi: { ...get().editorUi, wireFrom: null, lastError: null },
-    }),
+    })
+  },
 
-  clearScene: () =>
+  clearScene: () => {
+    useEditorUiStore.getState().reset()
     set({
       ...initial,
-      editorUi: { ...editorUiDefaults },
-    }),
+    })
+  },
 
   addDeviceFromAsset: (asset, position) => {
     const id = newDeviceId(asset.type === 'chiller' ? 'CH' : 'PUMP')
     const [, hy] = asset.halfExtents
-    const g = get().editorUi.snapGrid
+    const g = useEditorUiStore.getState().snapGrid
     const raw: [number, number, number] = position
       ? [position[0], hy, position[2]]
       : [0, hy, 0]
@@ -168,7 +121,7 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
   },
 
   updateDeviceTransform: (deviceId, position, rotationDeg) => {
-    const g = get().editorUi.snapGrid
+    const g = useEditorUiStore.getState().snapGrid
     const pos = g > 0 ? snapVec3(position, g) : position
     set((s) => ({
       devices: s.devices.map((d) => (d.id === deviceId ? { ...d, position: pos, rotation: rotationDeg } : d)),
@@ -190,8 +143,8 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       const devices = s.devices.filter((d) => d.id !== deviceId)
       const portGroups = s.portGroups.filter((g) => g.deviceId !== deviceId)
       const pipes = s.pipes.filter((p) => {
-        const fa = parsePipeEndpoint(p.from)
-        const tb = parsePipeEndpoint(p.to)
+        const fa = parsePipeEndpointRef(p.from)
+        const tb = parsePipeEndpointRef(p.to)
         if (!fa || !tb) return true
         return fa.deviceId !== deviceId && tb.deviceId !== deviceId
       })
@@ -206,7 +159,7 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     const pg = get().portGroups.find((g) => g.deviceId === deviceId)
     if (!d || !pg) return
     const newId = newDeviceId(d.type === 'chiller' ? 'CH' : 'PUMP')
-    const g = get().editorUi.snapGrid
+    const g = useEditorUiStore.getState().snapGrid
     const raw: [number, number, number] = [d.position[0] + 1.5, d.position[1], d.position[2] + 1.2]
     const position = g > 0 ? snapVec3(raw, g) : raw
     const device: Device = {
@@ -234,72 +187,94 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     })),
 
   tryConnectPorts: (from, to) => {
-    const a = from
-    const b = to
-    if (a.deviceId === b.deviceId && a.portId === b.portId) return
+    void (async () => {
+      const a = from
+      const b = to
+      if (a.deviceId === b.deviceId && a.portId === b.portId) return
 
-    const devA = get().devices.find((d) => d.id === a.deviceId)
-    const devB = get().devices.find((d) => d.id === b.deviceId)
-    if (!devA || !devB) return
+      const devA = get().devices.find((d) => d.id === a.deviceId)
+      const devB = get().devices.find((d) => d.id === b.deviceId)
+      if (!devA || !devB) return
 
-    const pgA = get().portGroups.find((g) => g.deviceId === a.deviceId)
-    const pgB = get().portGroups.find((g) => g.deviceId === b.deviceId)
-    if (!pgA || !pgB) return
-    if (!pgA.ports.some((p) => p.id === a.portId)) return
-    if (!pgB.ports.some((p) => p.id === b.portId)) return
+      const pgA = get().portGroups.find((g) => g.deviceId === a.deviceId)
+      const pgB = get().portGroups.find((g) => g.deviceId === b.deviceId)
+      if (!pgA || !pgB) return
+      if (!pgA.ports.some((p) => p.id === a.portId)) return
+      if (!pgB.ports.some((p) => p.id === b.portId)) return
 
-    const fromRef = `${a.deviceId}.${a.portId}`
-    const toRef = `${b.deviceId}.${b.portId}`
+      const fromRef = `${a.deviceId}.${a.portId}`
+      const toRef = `${b.deviceId}.${b.portId}`
 
-    const dup = get().pipes.some(
-      (p) =>
-        (p.from === fromRef && p.to === toRef) || (p.from === toRef && p.to === fromRef),
-    )
-    if (dup) {
-      get().setError('该两端口之间已有管线，未重复添加。')
-      return
-    }
+      const dup = get().pipes.some(
+        (p) =>
+          (p.from === fromRef && p.to === toRef) || (p.from === toRef && p.to === fromRef),
+      )
+      if (dup) {
+        useEditorUiStore.getState().setError('该两端口之间已有管线，未重复添加。')
+        return
+      }
 
-    const system =
-      pgA.ports.find((p) => p.id === a.portId)?.system ??
-      pgB.ports.find((p) => p.id === b.portId)?.system ??
-      devA.system
+      const system =
+        pgA.ports.find((p) => p.id === a.portId)?.system ??
+        pgB.ports.find((p) => p.id === b.portId)?.system ??
+        devA.system
 
-    // 策略：冲突时禁止连线（不清空 wireFrom，方便用户换端口重试）
-    const portA = pgA.ports.find((p) => p.id === a.portId)
-    const portB = pgB.ports.find((p) => p.id === b.portId)
-    if (!portA || !portB) return
+      const portA = pgA.ports.find((p) => p.id === a.portId)
+      const portB = pgB.ports.find((p) => p.id === b.portId)
+      if (!portA || !portB) return
 
-    const wa = new Vector3()
-    const wb = new Vector3()
-    getPortWorldPosition(devA, portA, wa)
-    getPortWorldPosition(devB, portB, wb)
-    const PIPE_ENDPOINT_TRIM = 0.09
-    const pts = buildOrthogonalRoute(wa, wb, TRUNK_Y, PIPE_ENDPOINT_TRIM)
-    // 不排除端点设备：若路由穿入端口设备主体，也要被冲突检测捕获。
-    // 端口接入附近的“允许”由 ignoreEndpointDistance 处理。
-    const exclude = new Set<string>()
-    const PIPE_COLLISION_INFLATE = 0.03
-    const PIPE_IGNORE_ENDPOINT = 0.05
-    const conflict = pipeSegmentsCollideDevices(pts, get().devices, exclude, PIPE_COLLISION_INFLATE, PIPE_IGNORE_ENDPOINT)
-    if (conflict) {
-      get().setError('该连接会与设备包围盒冲突，已阻止生成管线。')
-      return
-    }
+      const [{ Vector3 }, { getPortWorldPosition }, { buildOrthogonalRoute }, { pipeSegmentsCollideDevices }] =
+        await Promise.all([
+          import('three'),
+          import('@/utils/portWorld'),
+          import('@/services/orthogonalRoute'),
+          import('@/services/pipeCollision'),
+        ])
 
-    const pipe: Pipe = {
-      id: newPipeId(),
-      from: fromRef,
-      to: toRef,
-      system,
-      routeType: 'orthogonal',
-      level: 'main',
-    }
+      const wa = new Vector3()
+      const wb = new Vector3()
+      getPortWorldPosition(devA, portA, wa)
+      getPortWorldPosition(devB, portB, wb)
+      const pipeEndpointTrim = 0.09
+      const pts = buildOrthogonalRoute(wa, wb, TRUNK_Y, pipeEndpointTrim)
+      const exclude = new Set<string>()
+      const pipeCollisionInflate = 0.03
+      const pipeIgnoreEndpoint = 0.05
+      const conflict = pipeSegmentsCollideDevices(
+        pts,
+        get().devices,
+        exclude,
+        pipeCollisionInflate,
+        pipeIgnoreEndpoint,
+      )
+      if (conflict) {
+        useEditorUiStore.getState().setError('该连接会与设备包围盒冲突，已阻止生成管线。')
+        return
+      }
 
-    set((s) => ({
-      pipes: [...s.pipes, pipe],
-      editorUi: { ...s.editorUi, wireFrom: null, lastError: null },
-    }))
+      const stillDuplicate = get().pipes.some(
+        (p) =>
+          (p.from === fromRef && p.to === toRef) || (p.from === toRef && p.to === fromRef),
+      )
+      if (stillDuplicate) {
+        useEditorUiStore.getState().setError('该两端口之间已有管线，未重复添加。')
+        return
+      }
+
+      const pipe: Pipe = {
+        id: newPipeId(),
+        from: fromRef,
+        to: toRef,
+        system,
+        routeType: 'orthogonal',
+        level: 'main',
+      }
+
+      set((s) => ({
+        pipes: [...s.pipes, pipe],
+      }))
+      useEditorUiStore.getState().resetTransientState()
+    })()
   },
 
   exportSceneJson: () => {
@@ -313,12 +288,12 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
     try {
       parsed = JSON.parse(text) as unknown
     } catch {
-      get().setError('JSON 解析失败：内容不是合法 JSON')
+      useEditorUiStore.getState().setError('JSON 解析失败：内容不是合法 JSON')
       return false
     }
     const res = parseSceneJson(parsed)
     if (!res.success) {
-      get().setError(formatSceneParseError(res.error))
+      useEditorUiStore.getState().setError(formatSceneParseError(res.error))
       return false
     }
     get().loadScene(res.data)
@@ -386,7 +361,7 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       portGroups,
       pipes,
       selection: null,
-      editorUi: { ...get().editorUi, wireFrom: null, lastError: null },
     })
+    useEditorUiStore.getState().resetTransientState()
   },
 }))

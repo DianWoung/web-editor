@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ViewerCanvas } from '@/components/scene/ViewerCanvas'
 import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 import { useRuntimeStore } from '@/store/runtimeStore'
 import { useRuntimePolling } from '@/hooks/useRuntimePolling'
@@ -12,8 +13,8 @@ export function OverviewPage() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [sceneError, setSceneError] = useState<string | null>(null)
-  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
-  const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
+  const flowEnabled = useEditorUiStore((s) => s.flowEnabled)
+  const setFlowEnabled = useEditorUiStore((s) => s.setFlowEnabled)
   const deviceCount = useSceneStore((s) => s.devices.length)
   const totalPower = useRuntimeStore((s) => s.totalPower)
   const avgCop = useRuntimeStore((s) => s.avgCop)

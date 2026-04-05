@@ -20,33 +20,33 @@
 - Create: `apps/mock-api/src/routes/runtime.ts`
 - Test: `apps/mock-api/src/app.test.ts`
 
-- [ ] **Step 1: Write a failing route-level test for runtime overview**
+- [x] **Step 1: Write a failing route-level test for runtime overview**
 
 Add a new `GET /api/runtime/overview` test in `apps/mock-api/src/app.test.ts` that expects:
 - HTTP `200`
 - JSON object with `totalPower`, `avgCop`, `activeAlarmCount`, and `lastUpdatedAt`
 
-- [ ] **Step 2: Run the backend test to verify it fails for the expected reason**
+- [x] **Step 2: Run the backend test to verify it fails for the expected reason**
 
 Run: `npm test -w mock-api`
 Expected: FAIL because `/api/runtime/overview` does not exist yet and returns `404`.
 
-- [ ] **Step 3: Write a failing route-level test for single-device runtime**
+- [x] **Step 3: Write a failing route-level test for single-device runtime**
 
 Add a new `GET /api/runtime/devices/:deviceId` test in `apps/mock-api/src/app.test.ts` that expects:
 - HTTP `200`
 - JSON object with `deviceId`, `onlineStatus`, `updatedAt`, `points`, `alarms`, and `trend`
 
-- [ ] **Step 4: Run the backend test again to verify both tests fail**
+- [x] **Step 4: Run the backend test again to verify both tests fail**
 
 Run: `npm test -w mock-api`
 Expected: FAIL because the runtime route is still missing.
 
-- [ ] **Step 5: Add minimal runtime route wiring and runtime schemas**
+- [x] **Step 5: Add minimal runtime route wiring and runtime schemas**
 
 Implement the smallest possible version that mounts `/api/runtime` in `apps/mock-api/src/app.ts`, adds runtime response Zod schemas to `apps/mock-api/src/schemas.ts`, and returns placeholder-but-schema-valid JSON from the new route module.
 
-- [ ] **Step 6: Run the backend test to verify the new runtime endpoints pass**
+- [x] **Step 6: Run the backend test to verify the new runtime endpoints pass**
 
 Run: `npm test -w mock-api`
 Expected: PASS for the new runtime route tests and previously existing API tests.
@@ -57,20 +57,20 @@ Expected: PASS for the new runtime route tests and previously existing API tests
 - Modify: `apps/mock-api/src/routes/runtime.ts`
 - Test: `apps/mock-api/src/app.test.ts`
 
-- [ ] **Step 1: Write a failing test for unknown device runtime**
+- [x] **Step 1: Write a failing test for unknown device runtime**
 
 Add a test in `apps/mock-api/src/app.test.ts` that requests `GET /api/runtime/devices/UNKNOWN` and expects HTTP `404` with `{ ok: false }`.
 
-- [ ] **Step 2: Run the backend test to verify it fails**
+- [x] **Step 2: Run the backend test to verify it fails**
 
 Run: `npm test -w mock-api`
 Expected: FAIL because the placeholder handler does not distinguish missing devices yet.
 
-- [ ] **Step 3: Implement `404` handling in the runtime route**
+- [x] **Step 3: Implement `404` handling in the runtime route**
 
 Update `apps/mock-api/src/routes/runtime.ts` so unknown scene device IDs produce a controlled `404`.
 
-- [ ] **Step 4: Re-run the backend test suite**
+- [x] **Step 4: Re-run the backend test suite**
 
 Run: `npm test -w mock-api`
 Expected: PASS
@@ -86,7 +86,7 @@ Expected: PASS
 - Modify: `apps/mock-api/src/schemas.ts`
 - Test: `apps/mock-api/src/app.test.ts`
 
-- [ ] **Step 1: Write a failing test that asserts generated device runtime fields**
+- [x] **Step 1: Write a failing test that asserts generated device runtime fields**
 
 Add a backend test that seeds a scene with at least one device and expects the runtime detail response to include:
 - deterministic `onlineStatus`
@@ -94,22 +94,22 @@ Add a backend test that seeds a scene with at least one device and expects the r
 - point-level `quality`
 - non-empty `points` and `trend`
 
-- [ ] **Step 2: Verify the failure is caused by incomplete runtime generation**
+- [x] **Step 2: Verify the failure is caused by incomplete runtime generation**
 
 Run: `npm test -w mock-api`
 Expected: FAIL because the placeholder runtime payload is too thin or non-deterministic.
 
-- [ ] **Step 3: Implement deterministic runtime generation**
+- [x] **Step 3: Implement deterministic runtime generation**
 
 Create `apps/mock-api/src/lib/runtimeGenerator.ts` to generate stable runtime payloads from scene devices, and `apps/mock-api/src/lib/runtimeService.ts` to assemble:
 - overview aggregate payload
 - per-device runtime payload
 
-- [ ] **Step 4: Replace placeholder route responses with service-backed data**
+- [x] **Step 4: Replace placeholder route responses with service-backed data**
 
 Update `apps/mock-api/src/routes/runtime.ts` to load the current scene and delegate to the runtime service.
 
-- [ ] **Step 5: Re-run backend tests**
+- [x] **Step 5: Re-run backend tests**
 
 Run: `npm test -w mock-api`
 Expected: PASS
@@ -122,20 +122,20 @@ Expected: PASS
 - Modify: `apps/mock-api/src/lib/runtimeService.ts`
 - Modify: `apps/mock-api/src/app.test.ts`
 
-- [ ] **Step 1: Write a failing test for snapshot override**
+- [x] **Step 1: Write a failing test for snapshot override**
 
 Add a test that writes an injected runtime snapshot file under the fixture-specific `<dataRoot>/runtime/` directory created by `apps/mock-api/src/app.test.ts`, then expect the runtime endpoint to return snapshot values instead of generated values.
 
-- [ ] **Step 2: Verify the override test fails**
+- [x] **Step 2: Verify the override test fails**
 
 Run: `npm test -w mock-api`
 Expected: FAIL because snapshot loading is not implemented yet.
 
-- [ ] **Step 3: Implement snapshot lookup and precedence**
+- [x] **Step 3: Implement snapshot lookup and precedence**
 
 Create `apps/mock-api/src/lib/runtimeSnapshot.ts` to read and validate an optional snapshot file, then update `apps/mock-api/src/lib/runtimeService.ts` so snapshot data wins when present and generated data is the fallback.
 
-- [ ] **Step 4: Run the backend suite again**
+- [x] **Step 4: Run the backend suite again**
 
 Run: `npm test -w mock-api`
 Expected: PASS
@@ -150,11 +150,11 @@ Expected: PASS
 - Test: `apps/twin-web/src/services/api/runtimeApi.test.ts`
 - Modify: `apps/twin-web/package.json`
 
-- [ ] **Step 1: Write a failing frontend API parsing test for overview**
+- [x] **Step 1: Write a failing frontend API parsing test for overview**
 
 Create `apps/twin-web/src/services/api/runtimeApi.test.ts` with a test that expects a runtime overview parser/client helper to accept backend JSON containing `totalPower`, `avgCop`, `activeAlarmCount`, and `lastUpdatedAt`.
 
-- [ ] **Step 2: Add a scoped frontend test command and verify red**
+- [x] **Step 2: Add a scoped frontend test command and verify red**
 
 Add a `test` script to `apps/twin-web/package.json` using the Node test runner, but scope it to the runtime-focused test files so unrelated existing test failures do not pollute the TDD loop. The command should explicitly include only:
 - `src/services/api/runtimeApi.test.ts`
@@ -166,7 +166,7 @@ Then run:
 Run: `npm test -w twin-web`
 Expected: FAIL because the runtime API module and types do not exist yet.
 
-- [ ] **Step 3: Update frontend runtime contract types**
+- [x] **Step 3: Update frontend runtime contract types**
 
 Replace the current local-mock-only shape in `apps/twin-web/src/schemas/deviceRuntime.ts` with API-backed types for overview/detail runtime payloads:
 - `RuntimeOverview`
@@ -176,13 +176,13 @@ Replace the current local-mock-only shape in `apps/twin-web/src/schemas/deviceRu
 
 Keep `runMode`, `runModeDescription`, `strategyHint`, and `aiSuggestion` available to `DeviceDetailPage` for now, because backend-owning those fields is explicitly out of scope in the approved design. The runtime contract migration must not silently remove those UI sections.
 
-- [ ] **Step 4: Implement `runtimeApi.ts`**
+- [x] **Step 4: Implement `runtimeApi.ts`**
 
 Create `apps/twin-web/src/services/api/runtimeApi.ts` with typed methods for:
 - `getRuntimeOverview()`
 - `getDeviceRuntime(deviceId)`
 
-- [ ] **Step 5: Re-run frontend API tests**
+- [x] **Step 5: Re-run frontend API tests**
 
 Run: `npm test -w twin-web`
 Expected: PASS
@@ -194,19 +194,19 @@ Expected: PASS
 - Modify: `apps/twin-web/src/store/runtimeStore.test.ts`
 - Create: `apps/twin-web/src/hooks/useRuntimePolling.ts`
 
-- [ ] **Step 1: Write a failing store test for overview fetch state**
+- [x] **Step 1: Write a failing store test for overview fetch state**
 
 Add a test in `apps/twin-web/src/store/runtimeStore.test.ts` that expects the store to:
 - call an injected or mocked runtime API method
 - save `overview`
 - set and clear loading/error state correctly
 
-- [ ] **Step 2: Run the store test to verify it fails**
+- [x] **Step 2: Run the store test to verify it fails**
 
 Run: `npm test -w twin-web`
 Expected: FAIL because the current store still generates data locally and lacks fetch state.
 
-- [ ] **Step 3: Refactor `runtimeStore.ts` to fetch and cache API data**
+- [x] **Step 3: Refactor `runtimeStore.ts` to fetch and cache API data**
 
 Update the runtime store so it owns:
 - `overview`
@@ -218,11 +218,11 @@ Update the runtime store so it owns:
 - `lastFetchedAt`
 - actions for fetching overview and device runtime
 
-- [ ] **Step 4: Add polling lifecycle helper**
+- [x] **Step 4: Add polling lifecycle helper**
 
 Create `apps/twin-web/src/hooks/useRuntimePolling.ts` to centralize polling setup and teardown so pages do not duplicate timer logic.
 
-- [ ] **Step 5: Re-run frontend store tests**
+- [x] **Step 5: Re-run frontend store tests**
 
 Run: `npm test -w twin-web`
 Expected: PASS
@@ -239,7 +239,7 @@ Expected: PASS
 - Modify or Delete: `apps/twin-web/src/services/mockDeviceRuntime.ts`
 - Modify: `apps/twin-web/package.json`
 
-- [ ] **Step 1: Write a failing page-integration test for overview/detail runtime wiring**
+- [x] **Step 1: Write a failing page-integration test for overview/detail runtime wiring**
 
 Create `apps/twin-web/src/pages/runtimeIntegration.test.tsx` with a minimal React integration harness for runtime page wiring. The test should prove:
 - overview-related UI reads values from backend fetch results
@@ -247,12 +247,12 @@ Create `apps/twin-web/src/pages/runtimeIntegration.test.tsx` with a minimal Reac
 - `DeviceDetailPage` still renders the existing strategy and AI sections
 - old local generation behavior is no longer required for overview/detail
 
-- [ ] **Step 2: Verify the failure**
+- [x] **Step 2: Verify the failure**
 
 Run: `npm test -w twin-web`
 Expected: FAIL because the pages and sync hook still rely on local runtime generation or do not yet consume the backend-backed runtime store.
 
-- [ ] **Step 3: Update page integration**
+- [x] **Step 3: Update page integration**
 
 Change:
 - `OverviewPage.tsx` to fetch overview data and use polling
@@ -261,7 +261,7 @@ Change:
 
 Remove or isolate the old `mockDeviceRuntime.ts` path if it is no longer needed by overview/detail.
 
-- [ ] **Step 4: Re-run frontend tests**
+- [x] **Step 4: Re-run frontend tests**
 
 Run: `npm test -w twin-web`
 Expected: PASS
@@ -272,22 +272,22 @@ Expected: PASS
 - Modify: `apps/twin-web/README.md`
 - Modify: `docs/superpowers/specs/2026-04-02-runtime-data-closed-loop-design.md` only if implementation clarifications are required
 
-- [ ] **Step 1: Run backend tests**
+- [x] **Step 1: Run backend tests**
 
 Run: `npm test -w mock-api`
 Expected: PASS
 
-- [ ] **Step 2: Run frontend tests**
+- [x] **Step 2: Run frontend tests**
 
 Run: `npm test -w twin-web`
 Expected: PASS
 
-- [ ] **Step 3: Run frontend lint**
+- [x] **Step 3: Run frontend lint**
 
 Run: `npm run lint -w twin-web`
 Expected: PASS
 
-- [ ] **Step 4: Run both builds**
+- [x] **Step 4: Run both builds**
 
 Run: `npm run build -w mock-api`
 Expected: PASS
@@ -295,7 +295,7 @@ Expected: PASS
 Run: `npm run build -w twin-web`
 Expected: PASS
 
-- [ ] **Step 5: Update usage docs**
+- [x] **Step 5: Update usage docs**
 
 Document:
 - runtime endpoint behavior

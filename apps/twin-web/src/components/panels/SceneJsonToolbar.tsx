@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { useEditorUiStore, type SnapGridOption } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
-import type { SnapGridOption } from '@/store/sceneStore'
 import { loadDemoSceneIntoStore, saveCurrentSceneFromStore } from '@/services/loadDemoScene'
 
 export function SceneJsonToolbar() {
@@ -9,18 +9,18 @@ export function SceneJsonToolbar() {
   const exportSceneJson = useSceneStore((s) => s.exportSceneJson)
   const importSceneJsonText = useSceneStore((s) => s.importSceneJsonText)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
-  const lastError = useSceneStore((s) => s.editorUi.lastError)
-  const showGrid = useSceneStore((s) => s.editorUi.showGrid)
-  const showPipes = useSceneStore((s) => s.editorUi.showPipes)
-  const snapGrid = useSceneStore((s) => s.editorUi.snapGrid)
-  const flowEnabled = useSceneStore((s) => s.editorUi.flowEnabled)
-  const setShowGrid = useSceneStore((s) => s.setShowGrid)
-  const setShowPipes = useSceneStore((s) => s.setShowPipes)
-  const setSnapGrid = useSceneStore((s) => s.setSnapGrid)
-  const setFlowEnabled = useSceneStore((s) => s.setFlowEnabled)
-  const clearError = useSceneStore((s) => s.clearError)
+  const lastError = useEditorUiStore((s) => s.lastError)
+  const showGrid = useEditorUiStore((s) => s.showGrid)
+  const showPipes = useEditorUiStore((s) => s.showPipes)
+  const snapGrid = useEditorUiStore((s) => s.snapGrid)
+  const flowEnabled = useEditorUiStore((s) => s.flowEnabled)
+  const setShowGrid = useEditorUiStore((s) => s.setShowGrid)
+  const setShowPipes = useEditorUiStore((s) => s.setShowPipes)
+  const setSnapGrid = useEditorUiStore((s) => s.setSnapGrid)
+  const setFlowEnabled = useEditorUiStore((s) => s.setFlowEnabled)
+  const clearError = useEditorUiStore((s) => s.clearError)
   const clearScene = useSceneStore((s) => s.clearScene)
-  const requestEditorCameraReset = useSceneStore((s) => s.requestEditorCameraReset)
+  const requestEditorCameraReset = useEditorUiStore((s) => s.requestEditorCameraReset)
 
   const download = () => {
     const text = exportSceneJson()
@@ -45,7 +45,7 @@ export function SceneJsonToolbar() {
     setSaveStatus(null)
     clearError()
     const r = await loadDemoSceneIntoStore()
-    if (!r.ok) useSceneStore.getState().setError(r.error)
+    if (!r.ok) useEditorUiStore.getState().setError(r.error)
   }
 
   const saveScene = async () => {
@@ -53,7 +53,7 @@ export function SceneJsonToolbar() {
     clearError()
     const r = await saveCurrentSceneFromStore()
     if (!r.ok) {
-      useSceneStore.getState().setError(r.error)
+      useEditorUiStore.getState().setError(r.error)
       return
     }
     setSaveStatus(`已保存 ${new Date(r.data.updatedAt).toLocaleTimeString()}`)

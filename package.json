@@ -10,6 +10,9 @@
     "dev:api": "npm run dev -w mock-api",
     "build": "npm run build -w twin-web",
     "build:api": "npm run build -w mock-api",
+    "lint": "npm run lint -w twin-web",
+    "test": "npm test -w twin-web && npm test -w mock-api",
+    "check": "npm run lint && npm run test && npm run build && npm run build:api",
     "preview": "npm run preview -w twin-web"
   }
 }

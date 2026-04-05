@@ -1,8 +1,9 @@
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 
 /** 画布内浮层：连线中的状态提示（不挡 Orbit，仅展示） */
 export function EditorCanvasHud() {
-  const wireFrom = useSceneStore((s) => s.editorUi.wireFrom)
+  const wireFrom = useEditorUiStore((s) => s.wireFrom)
   const devices = useSceneStore((s) => s.devices)
   const portGroups = useSceneStore((s) => s.portGroups)
   const deviceCount = devices.length

@@ -54,6 +54,7 @@
 # 仓库根目录
 npm install
 npm run dev
+npm run check
 ```
 
 浏览器打开终端提示的本地 URL（默认可为 `http://localhost:5173`）。
@@ -68,6 +69,7 @@ npm run dev
 - 后端默认根据 `current.scene.json` 中的设备清单动态生成 deterministic 运行态，用于联调与演示。
 - 若 `mock-api` 的数据根目录下存在 `runtime/snapshot.json`，后端优先使用其中的 `overview` 与 `devices[deviceId]` 作为覆盖数据。
 - `DeviceDetailPage` 里的运行模式、策略说明、AI 建议目前仍是前端默认文案，不属于本轮 runtime API 的后端职责。
+- `npm test -w twin-web` 当前会同时跑 Node 侧 API/store 测试和 Vitest 页面级 runtime 集成测试。
 
 ## 性能基线（请在本机填写）
 

@@ -7,6 +7,7 @@ import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
 import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
+import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 
 export function EditorPage() {
@@ -41,7 +42,7 @@ export function EditorPage() {
   useEffect(() => {
     if (useSceneStore.getState().devices.length > 0) return
     void loadCurrentSceneIntoStore().then((result) => {
-      if (!result.ok) useSceneStore.getState().setError(result.error)
+      if (!result.ok) useEditorUiStore.getState().setError(result.error)
     })
   }, [])
 
@@ -106,7 +107,7 @@ export function EditorPage() {
         setPendingPlacement(null)
         const st = useSceneStore.getState()
         st.setSelection(null)
-        st.setWireFrom(null)
+        useEditorUiStore.getState().setWireFrom(null)
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const st = useSceneStore.getState()
@@ -116,7 +117,7 @@ export function EditorPage() {
       }
       if (e.key === 'Home') {
         e.preventDefault()
-        useSceneStore.getState().requestEditorCameraReset()
+        useEditorUiStore.getState().requestEditorCameraReset()
       }
     }
     window.addEventListener('keydown', onKey)
