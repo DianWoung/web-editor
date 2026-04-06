@@ -5,7 +5,7 @@
 本仓库是一个基于 Web 的机房数字孪生场景编辑与展示项目，采用 `npm workspaces` 管理两个应用：
 
 - `apps/twin-web`：前端主应用，负责场景编排、三维总览、设备详情展示
-- `apps/mock-api`：本地 Mock API，负责设备目录、场景 JSON 的读取与保存
+- `apps/mock-api`：本地 Mock API，负责设备目录、命名场景、当前场景与 runtime 数据的读取和保存
 
 当前落地状态更接近“阶段 1 主干稳定、阶段 2 的 runtime 闭环和基础质量门禁已接上，下一步进入结构收敛与产品化补齐”的形态。
 
@@ -54,7 +54,10 @@
 
 - 路由入口：`apps/twin-web/src/App.tsx`
 - 场景状态中心：`apps/twin-web/src/store/sceneStore.ts`
+- 编辑器 UI 状态：`apps/twin-web/src/store/editorUiStore.ts`
 - 编排页：`apps/twin-web/src/pages/editor/EditorPage.tsx`
+- 场景管理页：`apps/twin-web/src/pages/scenes/ScenesPage.tsx`
+- 场景预览页：`apps/twin-web/src/pages/scenes/ScenePreviewPage.tsx`
 - 总览页：`apps/twin-web/src/pages/overview/OverviewPage.tsx`
 - 详情页：`apps/twin-web/src/pages/detail/DeviceDetailPage.tsx`
 - 场景 API：`apps/twin-web/src/services/api/sceneApi.ts`
@@ -72,10 +75,10 @@
 
 ## 4. 当前已验证状态
 
-2026-04-05 fresh verification:
+2026-04-06 fresh verification:
 
-- `npm test -w twin-web`：通过，`11` 个测试全部通过
-- `npm test -w mock-api`：通过，`14` 个测试全部通过
+- `npm test -w twin-web`：通过，`17` 个测试全部通过
+- `npm test -w mock-api`：通过，`17` 个测试全部通过
 - `npm run lint -w twin-web`：通过
 - `npm run build`：通过
 - `npm run build:api`：通过
@@ -86,6 +89,7 @@
 - 仓库根级已提供 `lint`、`test`、`check` 聚合脚本
 - 已新增 GitHub Actions CI，执行与本地一致的 `npm run check`
 - 前端已补齐页面级 runtime 集成测试，覆盖 `/overview` 与 `/detail/:deviceId` 的 runtime 接线
+- 前端已补齐场景管理与预览页测试，覆盖 `/scenes` 列表/创建和 `/scenes/:sceneId/preview` 只读预览入口
 
 当前前端构建仍有明显体积压力：
 
@@ -120,11 +124,11 @@
 
 #### 3. 页面级质量门禁刚补齐，还缺更完整的端到端视角
 
-- 现状：已有 API/store 与页面级 runtime 集成测试，但还没有浏览器级 E2E
+- 现状：已有 API/store、场景管理页与预览页测试，但还没有浏览器级 E2E
 - 影响：路由、真实 canvas、浏览器交互链路仍可能存在未覆盖回归
 - 建议：
   - 下一步补最小浏览器级 smoke 测试
-  - 优先覆盖“总览进入详情”和“编排页保存场景”两条主链路
+  - 优先覆盖“场景管理进入预览/编辑”和“编排页保存场景”两条主链路
 
 ### P1 中优先级风险
 

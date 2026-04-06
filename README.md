@@ -1,10 +1,10 @@
 # web-editor
 
-Monorepo for a scene editor plus a mock runtime-data backend used for local development, demos, and closed-loop runtime verification.
+Monorepo for a scene editor, named-scene management/preview workflow, and a mock runtime-data backend used for local development, demos, and closed-loop runtime verification.
 
 ## Workspace Layout
 
-- `apps/twin-web`: frontend app for overview, device detail, and scene editing
+- `apps/twin-web`: frontend app for overview, named scene management/preview, device detail, and scene editing
 - `apps/mock-api`: mock backend serving scene, equipment, and runtime endpoints
 - `assets`: model generation assets and related source material
 - `docs`: project notes, specs, plans, and technical risk records
@@ -57,6 +57,13 @@ npm run check
 - the frontend currently refreshes runtime data with a 10 second polling loop
 - device detail polling forces refetches so runtime telemetry and alarms do not get stuck behind the client cache
 - `apps/mock-api/data/runtime/snapshot.json` can override generated runtime payloads when present
+
+## Scene Management Flow
+
+- `/scenes` lists saved named scenes and allows creating a new one
+- `/scenes/:sceneId/preview` provides a read-only 3D preview with camera controls and a flow toggle
+- `/editor?sceneId=...` loads a named scene into the editor for continued changes
+- `mock-api` exposes the scene library endpoints used by that flow: `GET /api/scene/library`, `GET|PUT /api/scene/library/:sceneId`, and `POST /api/scene/library/:sceneId/load`
 
 ## Where To Read More
 
