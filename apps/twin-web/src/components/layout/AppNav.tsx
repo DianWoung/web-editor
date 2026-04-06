@@ -11,6 +11,9 @@ export function AppNav() {
         <NavLink to="/overview" className={linkClass} end>
           三维总览
         </NavLink>
+        <NavLink to="/scenes" className={linkClass}>
+          场景管理
+        </NavLink>
         <NavLink to="/editor" className={linkClass}>
           场景编排
         </NavLink>

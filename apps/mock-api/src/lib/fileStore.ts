@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { ZodType } from 'zod'
 
@@ -33,4 +33,13 @@ export async function readJsonFile<T>(filePath: string, schema: ZodType<T>): Pro
 export async function writeJsonFile<T>(filePath: string, data: T) {
   await ensureParentDir(filePath)
   await writeFile(filePath, JSON.stringify(data, null, 2), 'utf8')
+}
+
+export async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await access(filePath)
+    return true
+  } catch {
+    return false
+  }
 }

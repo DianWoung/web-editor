@@ -17,6 +17,11 @@ const EditorPage = lazy(async () => {
   return { default: mod.EditorPage }
 })
 
+const ScenesPage = lazy(async () => {
+  const mod = await import('@/pages/scenes/ScenesPage')
+  return { default: mod.ScenesPage }
+})
+
 function AppShell() {
   return (
     <div className="app-shell">
@@ -37,6 +42,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/" element={<Navigate to="/overview" replace />} />
           <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/scenes" element={<ScenesPage />} />
           <Route path="/detail/:deviceId" element={<DeviceDetailPage />} />
           <Route path="/editor" element={<EditorPage />} />
         </Route>

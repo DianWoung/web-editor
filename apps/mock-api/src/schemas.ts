@@ -41,6 +41,27 @@ export const sceneFileSchema = z.object({
   pipes: z.array(pipeSchema),
 })
 
+export const sceneLibraryItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  updatedAt: z.string().min(1),
+  deviceCount: z.number().int().nonnegative(),
+  pipeCount: z.number().int().nonnegative(),
+})
+
+export const sceneLibraryIndexSchema = z.object({
+  items: z.array(sceneLibraryItemSchema),
+})
+
+export const currentSceneMetaSchema = z.object({
+  sceneId: z.string().min(1).nullable(),
+})
+
+export const saveNamedSceneRequestSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  scene: sceneFileSchema,
+})
+
 export const catalogSchema = z.object({
   assets: z.array(z.string().min(1)),
 })
@@ -106,6 +127,7 @@ export const runtimeSnapshotSchema = z.object({
 })
 
 export type SceneFile = z.infer<typeof sceneFileSchema>
+export type SceneLibraryItem = z.infer<typeof sceneLibraryItemSchema>
 export type RuntimeDevice = z.infer<typeof runtimeDeviceSchema>
 export type RuntimeOverview = z.infer<typeof runtimeOverviewSchema>
 export type RuntimeSnapshot = z.infer<typeof runtimeSnapshotSchema>

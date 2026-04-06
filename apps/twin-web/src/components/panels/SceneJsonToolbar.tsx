@@ -1,9 +1,11 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useEditorUiStore, type SnapGridOption } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
-import { loadDemoSceneIntoStore, saveCurrentSceneFromStore } from '@/services/loadDemoScene'
+import { loadDemoSceneIntoStore, saveCurrentSceneFromStore, saveNamedSceneFromStore } from '@/services/loadDemoScene'
 
 export function SceneJsonToolbar() {
+  const [searchParams] = useSearchParams()
   const fileRef = useRef<HTMLInputElement>(null)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const exportSceneJson = useSceneStore((s) => s.exportSceneJson)
@@ -21,6 +23,7 @@ export function SceneJsonToolbar() {
   const clearError = useEditorUiStore((s) => s.clearError)
   const clearScene = useSceneStore((s) => s.clearScene)
   const requestEditorCameraReset = useEditorUiStore((s) => s.requestEditorCameraReset)
+  const sceneId = searchParams.get('sceneId')
 
   const download = () => {
     const text = exportSceneJson()
@@ -51,12 +54,12 @@ export function SceneJsonToolbar() {
   const saveScene = async () => {
     setSaveStatus(null)
     clearError()
-    const r = await saveCurrentSceneFromStore()
+    const r = sceneId ? await saveNamedSceneFromStore(sceneId) : await saveCurrentSceneFromStore()
     if (!r.ok) {
       useEditorUiStore.getState().setError(r.error)
       return
     }
-    setSaveStatus(`已保存 ${new Date(r.data.updatedAt).toLocaleTimeString()}`)
+    setSaveStatus(`${sceneId ? '命名场景已保存' : '已保存'} ${new Date(r.data.updatedAt).toLocaleTimeString()}`)
   }
 
   return (
@@ -81,6 +84,9 @@ export function SceneJsonToolbar() {
         <button type="button" className="secondary" onClick={() => applyStressTest(80)}>
           压测：80 台 + 管线
         </button>
+        <Link className="secondary scene-link-button" to="/scenes">
+          打开场景管理
+        </Link>
         {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
         <span className="toolbar-hint">性能基线：URL 加 <code>?stress=80</code> 启动即生成</span>
       </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { EditorCanvas } from '@/components/scene/EditorCanvas'
 import { DevicePalette } from '@/components/panels/DevicePalette'
 import { EditorCanvasHud } from '@/components/panels/EditorCanvasHud'
@@ -6,17 +7,19 @@ import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
 import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
-import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
+import { loadCurrentSceneIntoStore, loadNamedSceneIntoStore } from '@/services/loadDemoScene'
 import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 
 export function EditorPage() {
+  const [searchParams] = useSearchParams()
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
   const [importedCatalog, setImportedCatalog] = useState<CatalogAsset[]>([])
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
+  const sceneId = searchParams.get('sceneId')
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -40,11 +43,12 @@ export function EditorPage() {
   }, [])
 
   useEffect(() => {
-    if (useSceneStore.getState().devices.length > 0) return
-    void loadCurrentSceneIntoStore().then((result) => {
+    if (!sceneId && useSceneStore.getState().devices.length > 0) return
+    const loader = sceneId ? loadNamedSceneIntoStore(sceneId) : loadCurrentSceneIntoStore()
+    void loader.then((result) => {
       if (!result.ok) useEditorUiStore.getState().setError(result.error)
     })
-  }, [])
+  }, [sceneId])
 
   useEffect(() => {
     const raw = new URLSearchParams(window.location.search).get('stress')
@@ -131,6 +135,11 @@ export function EditorPage() {
         <p className="muted small">
           内部工具 · Esc 取消 · Delete 删除 · Home 重置视角
         </p>
+        {sceneId ? (
+          <p className="muted small">
+            来自命名场景 · <Link className="linkish" to="/scenes">返回场景管理</Link>
+          </p>
+        ) : null}
       </header>
       <div className="editor-body">
         <DevicePalette

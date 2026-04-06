@@ -722,6 +722,248 @@ input {
   font-size: 0.82rem;
 }
 
+.scene-link-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.toolbar-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-field-label {
+  font-size: 0.82rem;
+  color: var(--twin-text-muted);
+}
+
+.toolbar-input {
+  min-width: 220px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-input);
+  color: inherit;
+}
+
+.toolbar-row--library {
+  align-items: stretch;
+}
+
+.scene-library {
+  width: min(100%, 820px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scene-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.scene-library-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scene-library-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-panel);
+}
+
+.scene-library-item--current {
+  border-color: var(--twin-accent-dim);
+  background: rgba(69, 196, 232, 0.08);
+}
+
+.scene-library-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scene-library-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.scene-library-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--twin-accent-dim);
+  background: rgba(69, 196, 232, 0.1);
+  color: var(--twin-accent);
+  font-size: 0.72rem;
+}
+
+.scenes-page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.scenes-side {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 12px;
+  overflow: auto;
+  border-right: 1px solid var(--twin-border);
+  background: var(--twin-bg-panel);
+}
+
+.scenes-preview {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--twin-bg-raised);
+}
+
+.scenes-card {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-card);
+}
+
+.scenes-card h1,
+.scenes-card h2 {
+  margin: 0 0 8px;
+}
+
+.scenes-card--hero {
+  background: linear-gradient(135deg, rgba(69, 196, 232, 0.1), rgba(26, 45, 66, 0.95));
+}
+
+.scenes-card--error {
+  border-color: var(--twin-danger-border);
+  background: var(--twin-danger-bg);
+  color: var(--twin-danger-text);
+}
+
+.scenes-create {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.scenes-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.scenes-list-header,
+.scenes-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.scenes-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scenes-list-item {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-panel);
+  color: inherit;
+}
+
+.scenes-list-item--active {
+  border-color: var(--twin-accent-dim);
+  background: rgba(69, 196, 232, 0.08);
+}
+
+.scenes-list-item__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.scenes-preview-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scenes-preview-stat {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--twin-border);
+  background: rgba(12, 18, 28, 0.38);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scenes-preview-stat strong {
+  font-size: 1.6rem;
+}
+
+.scenes-preview-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scenes-detail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scenes-detail-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-panel);
+}
+
 /* —— 阶段 2：总览 / 详情 —— */
 
 .overview-page {

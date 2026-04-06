@@ -9,7 +9,7 @@ import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
-import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
+import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
 
 function EditorOrbitControls() {
   /** drei 使用 three-stdlib 的 OrbitControls，与 @types/three 示例路径类型不兼容，仅依赖 reset() */
@@ -59,7 +59,7 @@ export function EditorCanvas({
 
   return (
     <Canvas
-      shadows
+      shadows={twinWebShadowMapConfig}
       gl={{
         antialias: typeof window !== 'undefined' ? window.devicePixelRatio <= 2 : true,
         powerPreference: 'low-power',

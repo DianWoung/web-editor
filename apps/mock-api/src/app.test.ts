@@ -201,6 +201,142 @@ test('POST /api/scene/reset-demo overwrites the current scene', async () => {
   assert.equal(res._getJSONData().devices[0].id, 'PUMP-1')
 })
 
+test('GET /api/scene/library returns saved named scenes', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/scene/library', {
+    name: '冷站白天工况',
+    scene: {
+      version: 1,
+      devices: [
+        {
+          id: 'CHW-PUMP-2',
+          type: 'pump',
+          name: 'CHW Pump 2',
+          assetId: 'chw_pump_v1',
+          position: [1, 0.35, 0],
+          rotation: [0, 0, 0],
+          system: 'CHW',
+          tags: [],
+          boundsHalfExtents: [0.35, 0.35, 0.35],
+        },
+      ],
+      portGroups: [{ deviceId: 'CHW-PUMP-2', ports: [] }],
+      pipes: [],
+    },
+  })
+  assert.equal(createRes.statusCode, 200)
+  const created = createRes._getJSONData()
+  assert.equal(created.ok, true)
+  assert.equal(created.name, '冷站白天工况')
+  assert.match(created.sceneId, /^scene(-|[a-z0-9])+/)
+  assert.match(created.updatedAt, /^\d{4}-\d{2}-\d{2}T/)
+
+  const listRes = await performRequest(app, 'GET', '/api/scene/library')
+  assert.equal(listRes.statusCode, 200)
+  assert.equal(listRes._getJSONData().items.length, 1)
+  assert.deepEqual(listRes._getJSONData().items[0], {
+    id: created.sceneId,
+    name: '冷站白天工况',
+    updatedAt: created.updatedAt,
+    deviceCount: 1,
+    pipeCount: 0,
+    isCurrent: false,
+  })
+})
+
+test('POST /api/scene/library/:sceneId/load loads a named scene into current scene', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/scene/library', {
+    name: '冷站夜间工况',
+    scene: {
+      version: 1,
+      devices: [
+        {
+          id: 'CHW-PUMP-9',
+          type: 'pump',
+          name: 'CHW Pump 9',
+          assetId: 'chw_pump_v1',
+          position: [9, 0.35, 0],
+          rotation: [0, 0, 0],
+          system: 'CHW',
+          tags: [],
+          boundsHalfExtents: [0.35, 0.35, 0.35],
+        },
+      ],
+      portGroups: [{ deviceId: 'CHW-PUMP-9', ports: [] }],
+      pipes: [],
+    },
+  })
+  assert.equal(createRes.statusCode, 200)
+  const sceneId = createRes._getJSONData().sceneId
+
+  const loadRes = await performRequest(app, 'POST', `/api/scene/library/${sceneId}/load`)
+  assert.equal(loadRes.statusCode, 200)
+  assert.equal(loadRes._getJSONData().devices[0].id, 'CHW-PUMP-9')
+
+  const currentRes = await performRequest(app, 'GET', '/api/scene')
+  assert.equal(currentRes.statusCode, 200)
+  assert.equal(currentRes._getJSONData().devices[0].id, 'CHW-PUMP-9')
+
+  const listRes = await performRequest(app, 'GET', '/api/scene/library')
+  assert.equal(listRes.statusCode, 200)
+  assert.equal(listRes._getJSONData().items[0]?.isCurrent, true)
+})
+
+test('PUT /api/scene/library/:sceneId updates a named scene and current scene snapshot', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/scene/library', {
+    name: '冷站周末工况',
+    scene: {
+      version: 1,
+      devices: [],
+      portGroups: [],
+      pipes: [],
+    },
+  })
+  const sceneId = createRes._getJSONData().sceneId as string
+
+  const updateRes = await performRequest(app, 'PUT', `/api/scene/library/${sceneId}`, {
+    version: 1,
+    devices: [
+      {
+        id: 'CHW-PUMP-77',
+        type: 'pump',
+        name: 'CHW Pump 77',
+        assetId: 'chw_pump_v1',
+        position: [7, 0.35, 0],
+        rotation: [0, 0, 0],
+        system: 'CHW',
+        tags: [],
+        boundsHalfExtents: [0.35, 0.35, 0.35],
+      },
+    ],
+    portGroups: [{ deviceId: 'CHW-PUMP-77', ports: [] }],
+    pipes: [],
+  })
+
+  assert.equal(updateRes.statusCode, 200)
+  assert.equal(updateRes._getJSONData().sceneId, sceneId)
+
+  const namedRes = await performRequest(app, 'GET', `/api/scene/library/${sceneId}`)
+  assert.equal(namedRes.statusCode, 200)
+  assert.equal(namedRes._getJSONData().devices[0]?.id, 'CHW-PUMP-77')
+
+  const currentRes = await performRequest(app, 'GET', '/api/scene')
+  assert.equal(currentRes.statusCode, 200)
+  assert.equal(currentRes._getJSONData().devices[0]?.id, 'CHW-PUMP-77')
+
+  const listRes = await performRequest(app, 'GET', '/api/scene/library')
+  assert.equal(listRes.statusCode, 200)
+  assert.equal(listRes._getJSONData().items[0]?.deviceCount, 1)
+})
+
 test('GET /api/equipment/catalog returns equipment ids', async () => {
   const dataRoot = await setupFixture()
   const app = createApp({ dataRoot })

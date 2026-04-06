@@ -8,7 +8,7 @@ import { RoomFloor } from '@/components/scene/RoomFloor'
 import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
-import { configureTwinWebRenderer } from '@/utils/webglCanvasSetup'
+import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
 
 type Props = {
   modelUrlByAssetId: Record<string, string | null | undefined>
@@ -28,7 +28,7 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnab
 
   return (
     <Canvas
-      shadows
+      shadows={twinWebShadowMapConfig}
       gl={{
         antialias: typeof window !== 'undefined' ? window.devicePixelRatio <= 2 : true,
         powerPreference: 'low-power',

@@ -11,10 +11,29 @@ export const sceneFileSchema = z.object({
   pipes: z.array(pipeSchema),
 })
 
+export const sceneLibraryItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  updatedAt: z.string().min(1),
+  deviceCount: z.number().int().nonnegative(),
+  pipeCount: z.number().int().nonnegative(),
+  isCurrent: z.boolean(),
+})
+
+export const sceneLibraryResponseSchema = z.object({
+  items: z.array(sceneLibraryItemSchema),
+})
+
 export type SceneFile = z.infer<typeof sceneFileSchema>
+export type SceneLibraryItem = z.infer<typeof sceneLibraryItemSchema>
+export type SceneLibraryResponse = z.infer<typeof sceneLibraryResponseSchema>
 
 export function parseSceneJson(data: unknown) {
   return sceneFileSchema.safeParse(data)
+}
+
+export function parseSceneLibraryResponse(data: unknown) {
+  return sceneLibraryResponseSchema.safeParse(data)
 }
 
 export function formatSceneParseError(error: z.ZodError): string {

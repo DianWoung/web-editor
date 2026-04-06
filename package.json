@@ -5,6 +5,7 @@
     "apps/*"
   ],
   "scripts": {
+    "postinstall": "node scripts/patch-react-three-fiber.mjs",
     "dev": "npm run dev:web",
     "dev:web": "npm run dev -w twin-web",
     "dev:api": "npm run dev -w mock-api",
