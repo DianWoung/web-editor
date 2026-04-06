@@ -1,0 +1,89 @@
+import { Canvas } from '@react-three/fiber'
+import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
+import { OrbitControls } from '@react-three/drei/core/OrbitControls'
+
+import { DeviceInstance } from '@/components/scene/DeviceInstance'
+import { PipeRun } from '@/components/scene/PipeRun'
+import { RoomFloor } from '@/components/scene/RoomFloor'
+import type { SceneFile } from '@/schemas/scene'
+import { sceneTheme } from '@/theme/sceneTheme'
+import type { RenderStyle } from '@/services/loadEquipmentCatalog'
+import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
+
+type Props = {
+  scene: SceneFile
+  modelUrlByAssetId: Record<string, string | null | undefined>
+  renderStyleByAssetId: Record<string, RenderStyle | undefined>
+  flowEnabled?: boolean
+}
+
+export function ScenePreviewCanvas({
+  scene,
+  modelUrlByAssetId,
+  renderStyleByAssetId,
+  flowEnabled = false,
+}: Props) {
+  return (
+    <Canvas
+      shadows={twinWebShadowMapConfig}
+      gl={{
+        antialias: typeof window !== 'undefined' ? window.devicePixelRatio <= 2 : true,
+        powerPreference: 'low-power',
+        outputColorSpace: SRGBColorSpace,
+        toneMapping: ACESFilmicToneMapping,
+        toneMappingExposure: 1.15,
+      }}
+      camera={{ position: [14, 11, 14], fov: 45, near: 0.1, far: 500 }}
+      style={{ width: '100%', height: '100%', background: sceneTheme.background }}
+      onCreated={({ gl }) => configureTwinWebRenderer(gl)}
+    >
+      <color attach="background" args={[sceneTheme.background]} />
+      <ambientLight color={sceneTheme.ambientColor} intensity={sceneTheme.ambientIntensity} />
+      <hemisphereLight
+        args={[sceneTheme.hemisphereSky, sceneTheme.hemisphereGround, sceneTheme.hemisphereIntensity]}
+        position={[0, 48, 0]}
+      />
+      <pointLight position={[-14, 12, -12]} color={sceneTheme.fillColor} intensity={sceneTheme.fillIntensity} />
+      <directionalLight
+        color={sceneTheme.directionalColor}
+        position={[12, 20, 10]}
+        intensity={sceneTheme.directionalIntensity}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-far={64}
+        shadow-camera-left={-28}
+        shadow-camera-right={28}
+        shadow-camera-top={28}
+        shadow-camera-bottom={-28}
+        shadow-bias={-0.00025}
+        shadow-normalBias={0.03}
+        shadow-radius={6}
+      />
+      <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
+      <RoomFloor showGrid={false} />
+      {scene.pipes.map((pipe) => (
+        <PipeRun
+          key={pipe.id}
+          pipe={pipe}
+          devices={scene.devices}
+          portGroups={scene.portGroups}
+          flowEnabled={flowEnabled}
+        />
+      ))}
+      {scene.devices.map((device) => {
+        const ports = scene.portGroups.find((group) => group.deviceId === device.id)?.ports ?? []
+        return (
+          <DeviceInstance
+            key={device.id}
+            device={device}
+            ports={ports}
+            modelUrl={modelUrlByAssetId[device.assetId] ?? null}
+            renderStyle={renderStyleByAssetId[device.assetId] ?? 'box'}
+            flowEnabled={flowEnabled}
+            mode="viewer"
+          />
+        )
+      })}
+    </Canvas>
+  )
+}

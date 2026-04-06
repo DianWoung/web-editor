@@ -124,7 +124,7 @@ export function ScenesPage() {
           {items.length === 0 && !loadingList ? <p className="toolbar-hint">还没有命名场景</p> : null}
           <ul className="scenes-list">
             {items.map((item) => (
-              <li key={item.id}>
+              <li key={item.id} className="scenes-list-row">
                 <button
                   type="button"
                   className={`scenes-list-item${item.id === selectedSceneId ? ' scenes-list-item--active' : ''}`}
@@ -138,6 +138,14 @@ export function ScenesPage() {
                     {item.deviceCount} 台设备 · {item.pipeCount} 条管线
                   </span>
                 </button>
+                <div className="scenes-list-row__actions">
+                  <Link className="secondary scene-link-button" to={`/scenes/${encodeURIComponent(item.id)}/preview`}>
+                    预览
+                  </Link>
+                  <Link className="secondary scene-link-button" to={`/editor?sceneId=${encodeURIComponent(item.id)}`}>
+                    编辑
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

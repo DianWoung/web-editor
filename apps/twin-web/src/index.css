@@ -893,6 +893,12 @@ input {
   gap: 8px;
 }
 
+.scenes-list-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .scenes-list-item {
   width: 100%;
   text-align: left;
@@ -916,6 +922,12 @@ input {
   align-items: center;
   gap: 8px;
   font-weight: 600;
+}
+
+.scenes-list-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .scenes-preview-grid {
@@ -962,6 +974,110 @@ input {
   border-radius: 10px;
   border: 1px solid var(--twin-border);
   background: var(--twin-bg-panel);
+}
+
+.scene-preview-page {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  background: radial-gradient(circle at top left, rgba(69, 196, 232, 0.1), transparent 35%), var(--twin-bg-raised);
+}
+
+.scene-preview-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--twin-border);
+  background: rgba(12, 18, 28, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.scene-preview-topbar h1 {
+  margin: 4px 0 6px;
+}
+
+.scene-preview-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--twin-accent);
+  text-transform: uppercase;
+}
+
+.scene-preview-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.scene-preview-side {
+  width: 320px;
+  flex-shrink: 0;
+  padding: 12px;
+  overflow: auto;
+  border-right: 1px solid var(--twin-border);
+  background: rgba(21, 34, 50, 0.92);
+}
+
+.scene-preview-stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.scene-preview-canvas-shell {
+  flex: 1;
+  min-height: 520px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid var(--twin-border);
+  background: linear-gradient(180deg, rgba(26, 45, 66, 0.75), rgba(12, 18, 28, 0.92));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.scene-preview-toggle {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.scene-preview-toggle input {
+  accent-color: var(--twin-accent);
+}
+
+.scene-preview-hints {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--twin-text-muted);
+}
+
+@media (max-width: 1100px) {
+  .scene-preview-layout {
+    flex-direction: column;
+  }
+
+  .scene-preview-side {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--twin-border);
+  }
+
+  .scene-preview-canvas-shell {
+    min-height: 420px;
+  }
 }
 
 /* —— 阶段 2：总览 / 详情 —— */
