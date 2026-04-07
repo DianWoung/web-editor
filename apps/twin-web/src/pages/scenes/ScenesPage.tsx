@@ -139,6 +139,9 @@ export function ScenesPage() {
                   </span>
                 </button>
                 <div className="scenes-list-row__actions">
+                  <Link className="secondary scene-link-button" to={`/scenes/${encodeURIComponent(item.id)}/overview`}>
+                    总览
+                  </Link>
                   <Link className="secondary scene-link-button" to={`/scenes/${encodeURIComponent(item.id)}/preview`}>
                     预览
                   </Link>
@@ -164,6 +167,9 @@ export function ScenesPage() {
             </div>
             {selectedItem ? (
               <div className="scenes-actions">
+                <Link className="secondary scene-link-button" to={`/scenes/${encodeURIComponent(selectedItem.id)}/overview`}>
+                  打开总览
+                </Link>
                 <Link className="secondary scene-link-button" to={`/editor?sceneId=${encodeURIComponent(selectedItem.id)}`}>
                   进入编辑
                 </Link>

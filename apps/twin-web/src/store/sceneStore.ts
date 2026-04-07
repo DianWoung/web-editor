@@ -23,8 +23,22 @@ type SceneState = {
   selection: Selection
 }
 
+type SceneSnapshot = {
+  version: number
+  devices: Device[]
+  portGroups: PortGroup[]
+  pipes: Pipe[]
+  selection: Selection
+}
+
+type SceneHistoryState = {
+  undoStack: SceneSnapshot[]
+  canUndo: boolean
+}
+
 type SceneActions = {
   setSelection: (selection: Selection) => void
+  replaceScene: (scene: SceneFile) => void
   loadScene: (scene: SceneFile) => void
   clearScene: () => void
   addDeviceFromAsset: (asset: CatalogAsset, position?: [number, number, number]) => void
@@ -42,6 +56,7 @@ type SceneActions = {
   exportSceneJson: () => string
   importSceneJsonText: (text: string) => boolean
   applyStressTest: (count: number) => void
+  undo: () => void
 }
 
 function newDeviceId(prefix: string) {
@@ -58,6 +73,8 @@ function parsePipeEndpointRef(ref: string): { deviceId: string; portId: string }
   return { deviceId, portId }
 }
 
+const historyLimit = 50
+
 const initial: SceneState = {
   version: 1,
   devices: [],
@@ -66,27 +83,78 @@ const initial: SceneState = {
   selection: null,
 }
 
-export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
+const historyInitial: SceneHistoryState = {
+  undoStack: [],
+  canUndo: false,
+}
+
+function cloneSnapshot(snapshot: SceneSnapshot): SceneSnapshot {
+  return structuredClone(snapshot)
+}
+
+function toSnapshot(state: Pick<SceneState, 'version' | 'devices' | 'portGroups' | 'pipes' | 'selection'>): SceneSnapshot {
+  return cloneSnapshot({
+    version: state.version,
+    devices: state.devices,
+    portGroups: state.portGroups,
+    pipes: state.pipes,
+    selection: state.selection,
+  })
+}
+
+function sceneFileToSnapshot(scene: SceneFile): SceneSnapshot {
+  return {
+    version: scene.version,
+    devices: cloneSnapshot({ ...initial, ...scene, selection: null }).devices,
+    portGroups: cloneSnapshot({ ...initial, ...scene, selection: null }).portGroups,
+    pipes: cloneSnapshot({ ...initial, ...scene, selection: null }).pipes,
+    selection: null,
+  }
+}
+
+function snapshotsEqual(a: SceneSnapshot, b: SceneSnapshot) {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+function withHistory(
+  state: SceneState & SceneHistoryState,
+  nextSnapshot: SceneSnapshot,
+): Partial<SceneState & SceneHistoryState> {
+  const currentSnapshot = toSnapshot(state)
+  if (snapshotsEqual(currentSnapshot, nextSnapshot)) {
+    return {}
+  }
+  const undoStack = [...state.undoStack, currentSnapshot].slice(-historyLimit)
+  return {
+    ...cloneSnapshot(nextSnapshot),
+    undoStack,
+    canUndo: undoStack.length > 0,
+  }
+}
+
+export const useSceneStore = create<SceneState & SceneHistoryState & SceneActions>((set, get) => ({
   ...initial,
+  ...historyInitial,
 
   setSelection: (selection) => set({ selection }),
 
-  loadScene: (scene) => {
+  replaceScene: (scene) => {
     useEditorUiStore.getState().resetTransientState()
     set({
-      version: scene.version,
-      devices: scene.devices,
-      portGroups: scene.portGroups,
-      pipes: scene.pipes,
-      selection: null,
+      ...cloneSnapshot(sceneFileToSnapshot(scene)),
+      undoStack: [],
+      canUndo: false,
     })
+  },
+
+  loadScene: (scene) => {
+    useEditorUiStore.getState().resetTransientState()
+    set((state) => withHistory(state, sceneFileToSnapshot(scene)))
   },
 
   clearScene: () => {
     useEditorUiStore.getState().reset()
-    set({
-      ...initial,
-    })
+    set((state) => withHistory(state, toSnapshot(initial)))
   },
 
   addDeviceFromAsset: (asset, position) => {
@@ -113,45 +181,84 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       deviceId: id,
       ports: asset.portsTemplate.map((p) => ({ ...p })),
     }
-    set((s) => ({
-      devices: [...s.devices, device],
-      portGroups: [...s.portGroups, pg],
-      selection: { kind: 'device', deviceId: id },
-    }))
+    set((state) =>
+      withHistory(state, {
+        version: state.version,
+        devices: [...state.devices, device],
+        portGroups: [...state.portGroups, pg],
+        pipes: state.pipes,
+        selection: { kind: 'device', deviceId: id },
+      }),
+    )
   },
 
   updateDeviceTransform: (deviceId, position, rotationDeg) => {
     const g = useEditorUiStore.getState().snapGrid
     const pos = g > 0 ? snapVec3(position, g) : position
-    set((s) => ({
-      devices: s.devices.map((d) => (d.id === deviceId ? { ...d, position: pos, rotation: rotationDeg } : d)),
-    }))
+    set((state) => {
+      const device = state.devices.find((item) => item.id === deviceId)
+      if (!device) return {}
+      const unchanged =
+        JSON.stringify(device.position) === JSON.stringify(pos) &&
+        JSON.stringify(device.rotation) === JSON.stringify(rotationDeg)
+      if (unchanged) return {}
+      return withHistory(state, {
+        version: state.version,
+        devices: state.devices.map((d) => (d.id === deviceId ? { ...d, position: pos, rotation: rotationDeg } : d)),
+        portGroups: state.portGroups,
+        pipes: state.pipes,
+        selection: state.selection,
+      })
+    })
   },
 
   updateDeviceName: (deviceId, name) =>
-    set((s) => ({
-      devices: s.devices.map((d) => (d.id === deviceId ? { ...d, name } : d)),
-    })),
+    set((state) => {
+      const device = state.devices.find((item) => item.id === deviceId)
+      if (!device || device.name === name) return {}
+      return withHistory(state, {
+        version: state.version,
+        devices: state.devices.map((d) => (d.id === deviceId ? { ...d, name } : d)),
+        portGroups: state.portGroups,
+        pipes: state.pipes,
+        selection: state.selection,
+      })
+    }),
 
   updateDeviceSystem: (deviceId, system) =>
-    set((s) => ({
-      devices: s.devices.map((d) => (d.id === deviceId ? { ...d, system } : d)),
-    })),
+    set((state) => {
+      const device = state.devices.find((item) => item.id === deviceId)
+      if (!device || device.system === system) return {}
+      return withHistory(state, {
+        version: state.version,
+        devices: state.devices.map((d) => (d.id === deviceId ? { ...d, system } : d)),
+        portGroups: state.portGroups,
+        pipes: state.pipes,
+        selection: state.selection,
+      })
+    }),
 
   removeDevice: (deviceId) =>
-    set((s) => {
-      const devices = s.devices.filter((d) => d.id !== deviceId)
-      const portGroups = s.portGroups.filter((g) => g.deviceId !== deviceId)
-      const pipes = s.pipes.filter((p) => {
+    set((state) => {
+      if (!state.devices.some((device) => device.id === deviceId)) return {}
+      const devices = state.devices.filter((d) => d.id !== deviceId)
+      const portGroups = state.portGroups.filter((g) => g.deviceId !== deviceId)
+      const pipes = state.pipes.filter((p) => {
         const fa = parsePipeEndpointRef(p.from)
         const tb = parsePipeEndpointRef(p.to)
         if (!fa || !tb) return true
         return fa.deviceId !== deviceId && tb.deviceId !== deviceId
       })
-      let selection = s.selection
+      let selection = state.selection
       if (selection?.kind === 'device' && selection.deviceId === deviceId) selection = null
       if (selection?.kind === 'port' && selection.deviceId === deviceId) selection = null
-      return { devices, portGroups, pipes, selection }
+      return withHistory(state, {
+        version: state.version,
+        devices,
+        portGroups,
+        pipes,
+        selection,
+      })
     }),
 
   duplicateDevice: (deviceId) => {
@@ -172,19 +279,29 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       deviceId: newId,
       ports: pg.ports.map((p) => ({ ...p })),
     }
-    set((s) => ({
-      devices: [...s.devices, device],
-      portGroups: [...s.portGroups, npg],
-      selection: { kind: 'device', deviceId: newId },
-    }))
+    set((state) =>
+      withHistory(state, {
+        version: state.version,
+        devices: [...state.devices, device],
+        portGroups: [...state.portGroups, npg],
+        pipes: state.pipes,
+        selection: { kind: 'device', deviceId: newId },
+      }),
+    )
   },
 
   removePipe: (pipeId) =>
-    set((s) => ({
-      pipes: s.pipes.filter((p) => p.id !== pipeId),
-      selection:
-        s.selection?.kind === 'pipe' && s.selection.pipeId === pipeId ? null : s.selection,
-    })),
+    set((state) => {
+      if (!state.pipes.some((pipe) => pipe.id === pipeId)) return {}
+      return withHistory(state, {
+        version: state.version,
+        devices: state.devices,
+        portGroups: state.portGroups,
+        pipes: state.pipes.filter((p) => p.id !== pipeId),
+        selection:
+          state.selection?.kind === 'pipe' && state.selection.pipeId === pipeId ? null : state.selection,
+      })
+    }),
 
   tryConnectPorts: (from, to) => {
     void (async () => {
@@ -270,9 +387,15 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
         level: 'main',
       }
 
-      set((s) => ({
-        pipes: [...s.pipes, pipe],
-      }))
+      set((state) =>
+        withHistory(state, {
+          version: state.version,
+          devices: state.devices,
+          portGroups: state.portGroups,
+          pipes: [...state.pipes, pipe],
+          selection: state.selection,
+        }),
+      )
       useEditorUiStore.getState().resetTransientState()
     })()
   },
@@ -355,13 +478,29 @@ export const useSceneStore = create<SceneState & SceneActions>((set, get) => ({
       })
     }
 
-    set({
-      version: 1,
-      devices,
-      portGroups,
-      pipes,
-      selection: null,
-    })
+    set((state) =>
+      withHistory(state, {
+        version: 1,
+        devices,
+        portGroups,
+        pipes,
+        selection: null,
+      }),
+    )
     useEditorUiStore.getState().resetTransientState()
+  },
+
+  undo: () => {
+    useEditorUiStore.getState().resetTransientState()
+    set((state) => {
+      const previous = state.undoStack.at(-1)
+      if (!previous) return {}
+      const undoStack = state.undoStack.slice(0, -1)
+      return {
+        ...cloneSnapshot(previous),
+        undoStack,
+        canUndo: undoStack.length > 0,
+      }
+    })
   },
 }))

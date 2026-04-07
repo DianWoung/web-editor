@@ -87,6 +87,7 @@ describe('ScenesPage', () => {
     )
 
     await screen.findByRole('heading', { name: '白天工况' })
+    await screen.findByRole('link', { name: '总览' })
     await screen.findByRole('link', { name: '预览' })
     await screen.findByText('设备数')
     await screen.findByText('2')

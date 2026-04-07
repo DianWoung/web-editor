@@ -45,9 +45,10 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route element={<AppShell />}>
-          <Route path="/" element={<Navigate to="/overview" replace />} />
-          <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/" element={<Navigate to="/scenes" replace />} />
+          <Route path="/overview" element={<Navigate to="/scenes" replace />} />
           <Route path="/scenes" element={<ScenesPage />} />
+          <Route path="/scenes/:sceneId/overview" element={<OverviewPage />} />
           <Route path="/scenes/:sceneId/preview" element={<ScenePreviewPage />} />
           <Route path="/detail/:deviceId" element={<DeviceDetailPage />} />
           <Route path="/editor" element={<EditorPage />} />

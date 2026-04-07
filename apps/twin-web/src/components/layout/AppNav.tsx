@@ -8,14 +8,8 @@ export function AppNav() {
     <header className="app-nav">
       <div className="app-nav-brand">机房数字孪生</div>
       <nav className="app-nav-links">
-        <NavLink to="/overview" className={linkClass} end>
-          三维总览
-        </NavLink>
-        <NavLink to="/scenes" className={linkClass}>
+        <NavLink to="/scenes" className={linkClass} end>
           场景管理
-        </NavLink>
-        <NavLink to="/editor" className={linkClass}>
-          场景编排
         </NavLink>
       </nav>
     </header>

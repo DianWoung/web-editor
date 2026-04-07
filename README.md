@@ -60,9 +60,14 @@ npm run check
 
 ## Scene Management Flow
 
+- `/` now redirects to `/scenes`
+- top-level navigation exposes only `场景管理`
 - `/scenes` lists saved named scenes and allows creating a new one
-- `/scenes/:sceneId/preview` provides a read-only 3D preview with camera controls and a flow toggle
-- `/editor?sceneId=...` loads a named scene into the editor for continued changes
+- each scene row now links to:
+  - `/scenes/:sceneId/overview` for runtime overview and device-detail drilldown
+  - `/scenes/:sceneId/preview` for read-only 3D preview
+  - `/editor?sceneId=...` for editing
+- the editor keeps save in the top-right header and supports local undo for scene-structure changes
 - `mock-api` exposes the scene library endpoints used by that flow: `GET /api/scene/library`, `GET|PUT /api/scene/library/:sceneId`, and `POST /api/scene/library/:sceneId/load`
 
 ## Where To Read More
