@@ -57,8 +57,8 @@
 - 编辑器 UI 状态：`apps/twin-web/src/store/editorUiStore.ts`
 - 编排页：`apps/twin-web/src/pages/editor/EditorPage.tsx`
 - 场景管理页：`apps/twin-web/src/pages/scenes/ScenesPage.tsx`
+- 场景总览页：`apps/twin-web/src/pages/overview/OverviewPage.tsx`
 - 场景预览页：`apps/twin-web/src/pages/scenes/ScenePreviewPage.tsx`
-- 总览页：`apps/twin-web/src/pages/overview/OverviewPage.tsx`
 - 详情页：`apps/twin-web/src/pages/detail/DeviceDetailPage.tsx`
 - 场景 API：`apps/twin-web/src/services/api/sceneApi.ts`
 - 设备 API：`apps/twin-web/src/services/api/equipmentApi.ts`
@@ -90,6 +90,7 @@
 - 已新增 GitHub Actions CI，执行与本地一致的 `npm run check`
 - 前端已补齐页面级 runtime 集成测试，覆盖 `/overview` 与 `/detail/:deviceId` 的 runtime 接线
 - 前端已补齐场景管理与预览页测试，覆盖 `/scenes` 列表/创建和 `/scenes/:sceneId/preview` 只读预览入口
+- 前端已补齐 sceneStore 撤销测试，并将总览入口改成 `/scenes/:sceneId/overview`
 
 当前前端构建仍有明显体积压力：
 
@@ -122,13 +123,13 @@
   - 明确单一真相源
   - 用脚本同步或构建生成避免双写
 
-#### 3. 页面级质量门禁刚补齐，还缺更完整的端到端视角
+#### 3. 场景优先入口已经成形，还缺更完整的端到端视角
 
 - 现状：已有 API/store、场景管理页与预览页测试，但还没有浏览器级 E2E
 - 影响：路由、真实 canvas、浏览器交互链路仍可能存在未覆盖回归
 - 建议：
   - 下一步补最小浏览器级 smoke 测试
-  - 优先覆盖“场景管理进入预览/编辑”和“编排页保存场景”两条主链路
+  - 优先覆盖“场景管理进入总览/编辑”和“编排页保存/撤销”两条主链路
 
 ### P1 中优先级风险
 
@@ -158,11 +159,11 @@
 
 ### P2 低优先级风险
 
-#### 7. 编辑器能力仍偏 MVP，缺少常用生产功能
+#### 7. 编辑器能力仍偏 MVP，常用生产能力还在补齐
 
-- 现状：README 已明确无撤销/重做、无多人协作
+- 现状：当前已新增撤销，但仍无重做、无多人协作
 - 影响：内部试用可以，但实际编排效率有限
-- 建议：优先补撤销/重做，再考虑吸附、复制编排、批量操作
+- 建议：下一步补重做，再考虑吸附、复制编排、批量操作
 
 #### 8. 开发态依赖 `--experimental-strip-types`
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { ViewerCanvas } from '@/components/scene/ViewerCanvas'
 import { loadEquipmentCatalog, type RenderStyle } from '@/services/loadEquipmentCatalog'
-import { loadCurrentSceneIntoStore } from '@/services/loadDemoScene'
+import { loadCurrentSceneIntoStore, loadNamedSceneIntoStore } from '@/services/loadDemoScene'
 import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 import { useRuntimeStore } from '@/store/runtimeStore'
@@ -9,6 +10,7 @@ import { useRuntimePolling } from '@/hooks/useRuntimePolling'
 import { useSyncRuntimeWithScene } from '@/hooks/useSyncRuntimeWithScene'
 
 export function OverviewPage() {
+  const { sceneId } = useParams<{ sceneId: string }>()
   useSyncRuntimeWithScene()
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
@@ -46,15 +48,16 @@ export function OverviewPage() {
 
   useEffect(() => {
     let active = true
-    if (useSceneStore.getState().devices.length > 0) return
-    void loadCurrentSceneIntoStore().then((result) => {
+    if (!sceneId && useSceneStore.getState().devices.length > 0) return
+    const loader = sceneId ? loadNamedSceneIntoStore(sceneId) : loadCurrentSceneIntoStore()
+    void loader.then((result) => {
       if (!active) return
       setSceneError(result.ok ? null : result.error)
     })
     return () => {
       active = false
     }
-  }, [])
+  }, [sceneId])
 
   useRuntimePolling(async () => {
     await fetchOverview()

@@ -82,9 +82,9 @@ describe('runtime page integration', () => {
     }) as typeof fetch
 
     render(
-      <MemoryRouter initialEntries={['/overview']}>
+      <MemoryRouter initialEntries={['/scenes/scene-day/overview']}>
         <Routes>
-          <Route path="/overview" element={<OverviewPage />} />
+          <Route path="/scenes/:sceneId/overview" element={<OverviewPage />} />
         </Routes>
       </MemoryRouter>,
     )

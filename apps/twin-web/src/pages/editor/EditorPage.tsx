@@ -7,7 +7,12 @@ import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
 import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
-import { loadCurrentSceneIntoStore, loadNamedSceneIntoStore } from '@/services/loadDemoScene'
+import {
+  loadCurrentSceneIntoStore,
+  loadNamedSceneIntoStore,
+  saveCurrentSceneFromStore,
+  saveNamedSceneFromStore,
+} from '@/services/loadDemoScene'
 import { useEditorUiStore } from '@/store/editorUiStore'
 import { useSceneStore } from '@/store/sceneStore'
 
@@ -17,8 +22,11 @@ export function EditorPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
   const [importedCatalog, setImportedCatalog] = useState<CatalogAsset[]>([])
+  const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
+  const canUndo = useSceneStore((s) => s.canUndo)
+  const undo = useSceneStore((s) => s.undo)
   const sceneId = searchParams.get('sceneId')
   useEffect(() => {
     let cancelled = false
@@ -119,6 +127,10 @@ export function EditorPage() {
         if (sel?.kind === 'device') st.removeDevice(sel.deviceId)
         else if (sel?.kind === 'pipe') st.removePipe(sel.pipeId)
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault()
+        useSceneStore.getState().undo()
+      }
       if (e.key === 'Home') {
         e.preventDefault()
         useEditorUiStore.getState().requestEditorCameraReset()
@@ -128,18 +140,37 @@ export function EditorPage() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  const saveScene = useCallback(async () => {
+    setSaveStatus(null)
+    useEditorUiStore.getState().clearError()
+    const result = sceneId ? await saveNamedSceneFromStore(sceneId) : await saveCurrentSceneFromStore()
+    if (!result.ok) {
+      useEditorUiStore.getState().setError(result.error)
+      return
+    }
+    setSaveStatus(`${sceneId ? '命名场景已保存' : '已保存'} ${new Date(result.data.updatedAt).toLocaleTimeString()}`)
+  }, [sceneId])
+
   return (
     <div className="editor-root">
       <header className="editor-header">
-        <h1>场景编排</h1>
-        <p className="muted small">
-          内部工具 · Esc 取消 · Delete 删除 · Home 重置视角
-        </p>
-        {sceneId ? (
-          <p className="muted small">
-            来自命名场景 · <Link className="linkish" to="/scenes">返回场景管理</Link>
-          </p>
-        ) : null}
+        <div>
+          <h1>场景编排</h1>
+          <p className="muted small">Esc 取消 · Delete 删除 · Home 重置视角</p>
+          {sceneId ? <p className="muted small">正在编辑命名场景</p> : <p className="muted small">当前工作场景</p>}
+        </div>
+        <div className="editor-header-actions">
+          {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
+          <button type="button" className="secondary" onClick={() => undo()} disabled={!canUndo}>
+            撤销
+          </button>
+          <button type="button" className="primary" onClick={() => void saveScene()}>
+            保存
+          </button>
+          <Link className="secondary scene-link-button" to="/scenes">
+            返回场景管理
+          </Link>
+        </div>
       </header>
       <div className="editor-body">
         <DevicePalette

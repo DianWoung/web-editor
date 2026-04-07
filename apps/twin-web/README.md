@@ -6,9 +6,9 @@
 
 ## 路由（当前）
 
-- `/` → 重定向到 **`/overview`**
-- **`/overview`**：三维总览（只读场景 + 指标/模式/AI 摘要侧栏，点击设备进详情）
+- `/` → 重定向到 **`/scenes`**
 - **`/scenes`**：命名场景管理（创建、列表预览、进入编辑）
+- **`/scenes/:sceneId/overview`**：命名场景运行态总览（KPI、流动状态、设备详情跳转）
 - **`/scenes/:sceneId/preview`**：命名场景只读预览（可操作视角、开启流动状态，不可编辑）
 - **`/detail/:deviceId`**：设备详情（Mock 点位、ECharts 趋势、告警、模式与策略说明）
 - **`/editor`**：场景编排；带 `sceneId` 查询参数时加载命名场景
@@ -64,7 +64,7 @@ npm run check
 
 浏览器打开终端提示的本地 URL（默认可为 `http://localhost:5173`）。
 
-- **命名场景流转**：先在 `/scenes` 创建场景，再进入 `/scenes/:sceneId/preview` 查看三维效果，或跳到 `/editor?sceneId=...` 继续编辑。
+- **命名场景流转**：先在 `/scenes` 创建场景，再从场景列表进入 `总览 / 预览 / 编辑`；其中总览页保留运行态指标和设备详情跳转。
 - **加载示例场景**：编排页工具条「加载示例场景」会通过后端重置/载入当前示例场景。
 - **压测**：工具条「压测：80 台 + 管线」，或 URL 查询参数 **`?stress=80`**（上限 500），用于在目标机器上感受帧率并记录卡顿（阶段 1 性能基线）。
 
@@ -72,6 +72,7 @@ npm run check
 
 - `/overview` 与 `/detail/:deviceId` 不再直接在前端生成运行态，而是通过 `mock-api` 的 `GET /api/runtime/overview` 与 `GET /api/runtime/devices/:deviceId` 拉取。
 - 前端当前使用 **10 秒轮询** 刷新 overview 与 detail 运行态。
+- 命名场景总览现在从 `/scenes/:sceneId/overview` 进入，先加载指定场景，再轮询 runtime overview。
 - 后端默认根据 `current.scene.json` 中的设备清单动态生成 deterministic 运行态，用于联调与演示。
 - 若 `mock-api` 的数据根目录下存在 `runtime/snapshot.json`，后端优先使用其中的 `overview` 与 `devices[deviceId]` 作为覆盖数据。
 - `DeviceDetailPage` 里的运行模式、策略说明、AI 建议目前仍是前端默认文案，不属于本轮 runtime API 的后端职责。
@@ -88,4 +89,5 @@ npm run check
 
 - 无撤销/重做、无多人协作。
 - 预览页是只读场景效果页，不承载设备详情面板或保存动作。
+- 当前仅实现撤销，不含重做；设备连续拖拽时撤销粒度仍可能偏细。
 - 拖拽变换时端口小球在鼠标松开前可能短暂与占位体不同步（以属性面板与松手后状态为准）。

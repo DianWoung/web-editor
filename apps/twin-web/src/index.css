@@ -118,6 +118,10 @@ input {
   padding: 10px 14px;
   border-bottom: 1px solid var(--twin-border);
   background: var(--twin-bg-raised);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .editor-header h1 {
@@ -125,6 +129,14 @@ input {
   font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: 0.02em;
+}
+
+.editor-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .editor-body {

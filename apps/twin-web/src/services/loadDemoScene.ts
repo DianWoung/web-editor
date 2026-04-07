@@ -15,7 +15,7 @@ import type { SceneFile } from '@/schemas/scene'
 type ServiceResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string }
 
 function applySceneToStore(scene: SceneFile) {
-  useSceneStore.getState().loadScene(scene)
+  useSceneStore.getState().replaceScene(scene)
 }
 
 export async function loadCurrentSceneIntoStore(): Promise<ServiceResult> {
