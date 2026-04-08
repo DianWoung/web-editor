@@ -1,16 +1,13 @@
-import path from 'node:path'
 import { Router } from 'express'
 
-import { readJsonFile } from '../lib/fileStore.ts'
-import { assetJsonSchema, catalogSchema, portsFileSchema } from '../schemas.ts'
+import type { AssetStore } from '../lib/assetStore.ts'
 
-export function createEquipmentRouter(dataRoot: string) {
+export function createEquipmentRouter(assetStore: AssetStore) {
   const router = Router()
 
   router.get('/catalog', async (_req, res, next) => {
     try {
-      const filePath = path.join(dataRoot, 'equipment', 'catalog.json')
-      res.json(await readJsonFile(filePath, catalogSchema))
+      res.json({ assets: assetStore.listPublishedAssetKeys() })
     } catch (error) {
       next(error)
     }
@@ -18,8 +15,7 @@ export function createEquipmentRouter(dataRoot: string) {
 
   router.get('/:assetId', async (req, res, next) => {
     try {
-      const filePath = path.join(dataRoot, 'equipment', req.params.assetId, 'asset.json')
-      res.json(await readJsonFile(filePath, assetJsonSchema))
+      res.json(assetStore.getPublishedAssetJson(req.params.assetId))
     } catch (error) {
       next(error)
     }
@@ -27,8 +23,7 @@ export function createEquipmentRouter(dataRoot: string) {
 
   router.get('/:assetId/ports', async (req, res, next) => {
     try {
-      const filePath = path.join(dataRoot, 'equipment', req.params.assetId, 'ports.json')
-      res.json(await readJsonFile(filePath, portsFileSchema))
+      res.json(assetStore.getPublishedPortsJson(req.params.assetId))
     } catch (error) {
       next(error)
     }

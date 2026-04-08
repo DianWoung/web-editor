@@ -11,6 +11,9 @@ export function AppNav() {
         <NavLink to="/scenes" className={linkClass} end>
           场景管理
         </NavLink>
+        <NavLink to="/assets" className={linkClass} end>
+          资产管理
+        </NavLink>
       </nav>
     </header>
   )

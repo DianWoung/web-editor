@@ -77,10 +77,111 @@ export const assetJsonSchema = z.object({
   }),
   renderStyle: z.enum(['box', 'icosahedron', 'dodecahedron', 'octahedron']).optional(),
   modelGlb: z.boolean().optional(),
+  modelUrl: z.string().min(1).nullable().optional(),
 })
 
 export const portsFileSchema = z.object({
   ports: z.array(portSchema),
+})
+
+export const assetStatusSchema = z.enum(['draft', 'published', 'archived'])
+
+export const renderStyleSchema = z.enum(['box', 'icosahedron', 'dodecahedron', 'octahedron'])
+
+export const assetBoundsSchema = z.object({
+  halfExtents: z.tuple([z.number().positive(), z.number().positive(), z.number().positive()]),
+})
+
+export const assetMutationSchema = z.object({
+  assetKey: z.string().trim().min(1).max(80),
+  displayName: z.string().trim().min(1).max(120),
+  type: z.string().trim().min(1).max(80),
+  defaultSystem: z.string().trim().min(1).max(80),
+  assetVersion: z.number().int().positive(),
+  renderStyle: renderStyleSchema,
+  bounds: assetBoundsSchema,
+  modelUploadId: z.string().trim().min(1).nullable().optional(),
+})
+
+export const assetListItemSchema = z.object({
+  id: z.string().min(1),
+  assetKey: z.string().min(1),
+  displayName: z.string().min(1),
+  type: z.string().min(1),
+  defaultSystem: z.string().min(1),
+  assetVersion: z.number().int().positive(),
+  renderStyle: renderStyleSchema,
+  bounds: assetBoundsSchema,
+  modelUrl: z.string().min(1).nullable(),
+  status: assetStatusSchema,
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+})
+
+export const assetDetailSchema = z.object({
+  asset: assetListItemSchema,
+  ports: z.array(
+    z.object({
+      id: z.string().min(1),
+      portKey: z.string().min(1),
+      name: z.string().min(1),
+      position: z.tuple([z.number(), z.number(), z.number()]),
+      system: z.string().min(1),
+      direction: z.string().min(1),
+      sortOrder: z.number().int().nonnegative(),
+    }),
+  ),
+  bindings: z.array(
+    z.object({
+      id: z.string().min(1),
+      bindingType: z.enum(['device_identity', 'point_mapping', 'runtime_field']),
+      bindingKey: z.string().min(1),
+      bindingValue: z.string(),
+      note: z.string(),
+    }),
+  ),
+})
+
+export const assetPortMutationSchema = z.object({
+  portKey: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(120),
+  position: z.tuple([z.number(), z.number(), z.number()]),
+  system: z.string().trim().min(1).max(80),
+  direction: z.string().trim().min(1).max(40),
+})
+
+export const assetPortsPayloadSchema = z.object({
+  ports: z.array(assetPortMutationSchema),
+})
+
+export const assetBindingMutationSchema = z.object({
+  bindingType: z.enum(['device_identity', 'point_mapping', 'runtime_field']),
+  bindingKey: z.string().trim().min(1).max(120),
+  bindingValue: z.string(),
+  note: z.string().default(''),
+})
+
+export const assetBindingsPayloadSchema = z.object({
+  bindings: z.array(assetBindingMutationSchema),
+})
+
+export const assetUploadSchema = z.object({
+  id: z.string().min(1),
+  fileName: z.string().min(1),
+  storageKey: z.string().min(1),
+  publicUrl: z.string().min(1),
+  mimeType: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  uploadStatus: z.enum(['uploaded']),
+  createdAt: z.string().min(1),
+})
+
+export const assetVersionSchema = z.object({
+  id: z.string().min(1),
+  versionNo: z.number().int().positive(),
+  publishedAt: z.string().min(1),
+  publishedBy: z.string().min(1),
+  snapshotJson: z.record(z.string(), z.unknown()),
 })
 
 export const runtimeOverviewSchema = z.object({
@@ -128,6 +229,10 @@ export const runtimeSnapshotSchema = z.object({
 
 export type SceneFile = z.infer<typeof sceneFileSchema>
 export type SceneLibraryItem = z.infer<typeof sceneLibraryItemSchema>
+export type AssetDetail = z.infer<typeof assetDetailSchema>
+export type AssetListItem = z.infer<typeof assetListItemSchema>
+export type AssetUpload = z.infer<typeof assetUploadSchema>
+export type AssetVersion = z.infer<typeof assetVersionSchema>
 export type RuntimeDevice = z.infer<typeof runtimeDeviceSchema>
 export type RuntimeOverview = z.infer<typeof runtimeOverviewSchema>
 export type RuntimeSnapshot = z.infer<typeof runtimeSnapshotSchema>

@@ -263,6 +263,17 @@ input {
   gap: 8px;
 }
 
+.palette-import {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(69, 196, 232, 0.08);
+  border: 1px solid rgba(69, 196, 232, 0.16);
+}
+
 .palette-item {
   width: 100%;
   text-align: left;
@@ -358,6 +369,214 @@ input {
 .btn-row {
   display: flex;
   gap: 8px;
+}
+
+.assets-page {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+}
+
+.assets-sidebar,
+.assets-main {
+  min-height: 0;
+  overflow: auto;
+}
+
+.assets-sidebar {
+  padding: 14px;
+  border-right: 1px solid var(--twin-border);
+  background: var(--twin-bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assets-main {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background:
+    radial-gradient(circle at top right, rgba(69, 196, 232, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(26, 40, 56, 0.88), rgba(12, 18, 28, 0.96));
+}
+
+.assets-panel {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--twin-border);
+  background: rgba(21, 34, 50, 0.92);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assets-panel--summary {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.assets-panel--notice {
+  border-color: rgba(69, 196, 232, 0.28);
+}
+
+.assets-panel--error {
+  background: var(--twin-danger-bg);
+  border-color: var(--twin-danger-border);
+  color: var(--twin-danger-text);
+}
+
+.assets-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.assets-panel h1,
+.assets-panel h2 {
+  margin: 0;
+}
+
+.assets-filter,
+.assets-create-grid label,
+.assets-form-grid label,
+.assets-json-editor,
+.assets-file-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assets-create-grid,
+.assets-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assets-form-grid--bounds {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.assets-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 12px;
+}
+
+.assets-editor-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.assets-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assets-list-item {
+  width: 100%;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-card);
+  border-radius: 10px;
+  color: inherit;
+  text-align: left;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.assets-list-item--active {
+  border-color: var(--twin-accent-dim);
+  box-shadow: 0 0 0 1px rgba(69, 196, 232, 0.16);
+}
+
+.assets-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+
+.assets-table th,
+.assets-table td {
+  padding: 6px;
+  border-bottom: 1px solid rgba(143, 163, 184, 0.16);
+  vertical-align: top;
+}
+
+.assets-table input,
+.assets-table select,
+.assets-filter select,
+.assets-create-grid input,
+.assets-form-grid input,
+.assets-form-grid select,
+.assets-binding-row input,
+.assets-binding-row select,
+.assets-json-editor textarea,
+.assets-file-picker input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--twin-border);
+  background: var(--twin-bg-input);
+  color: inherit;
+}
+
+.assets-binding-row {
+  display: grid;
+  grid-template-columns: 170px 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.assets-bindings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assets-json-editor textarea {
+  resize: vertical;
+  min-height: 220px;
+}
+
+.assets-upload-meta {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(12, 18, 28, 0.7);
+  border: 1px solid rgba(143, 163, 184, 0.14);
+}
+
+@media (max-width: 1080px) {
+  .assets-page {
+    grid-template-columns: 1fr;
+  }
+
+  .assets-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assets-binding-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .primary,

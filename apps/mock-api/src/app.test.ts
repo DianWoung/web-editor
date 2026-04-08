@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { EventEmitter } from 'node:events'
 import { createRequest, createResponse } from 'node-mocks-http'
+import request from 'supertest'
 
 import { createApp } from './app.ts'
 
@@ -100,7 +101,7 @@ async function writeScene(
 
 async function performRequest(
   app: ReturnType<typeof createApp>,
-  method: 'GET' | 'POST' | 'PUT',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
   body?: unknown,
 ) {
@@ -357,6 +358,146 @@ test('GET /api/equipment/:assetId and ports return persisted asset files', async
   assert.equal(assetRes._getJSONData().assetId, 'chw_pump_v1')
   assert.equal(portsRes.statusCode, 200)
   assert.equal(portsRes._getJSONData().ports.length, 2)
+})
+
+test('asset management api supports draft create, update, list, and delete', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/assets', {
+    assetKey: 'cooling_tower_v1',
+    displayName: 'Cooling Tower',
+    type: 'tower',
+    defaultSystem: 'CW',
+    assetVersion: 1,
+    renderStyle: 'box',
+    bounds: { halfExtents: [1.5, 2, 1.5] },
+    modelUploadId: null,
+  })
+  assert.equal(createRes.statusCode, 201)
+  const created = createRes._getJSONData()
+  assert.equal(created.asset.assetKey, 'cooling_tower_v1')
+  assert.equal(created.asset.status, 'draft')
+
+  const updateRes = await performRequest(app, 'PUT', `/api/assets/${created.asset.id}`, {
+    assetKey: 'cooling_tower_v1',
+    displayName: 'Cooling Tower Updated',
+    type: 'tower',
+    defaultSystem: 'CW',
+    assetVersion: 2,
+    renderStyle: 'dodecahedron',
+    bounds: { halfExtents: [1.6, 2.2, 1.6] },
+    modelUploadId: null,
+  })
+  assert.equal(updateRes.statusCode, 200)
+  assert.equal(updateRes._getJSONData().asset.displayName, 'Cooling Tower Updated')
+  assert.equal(updateRes._getJSONData().asset.assetVersion, 2)
+
+  const listRes = await performRequest(app, 'GET', '/api/assets')
+  assert.equal(listRes.statusCode, 200)
+  assert.equal(listRes._getJSONData().items.some((item: { assetKey: string }) => item.assetKey === 'cooling_tower_v1'), true)
+
+  const deleteRes = await performRequest(app, 'DELETE', `/api/assets/${created.asset.id}`)
+  assert.equal(deleteRes.statusCode, 200)
+  assert.equal(deleteRes._getJSONData().ok, true)
+
+  const afterDeleteRes = await performRequest(app, 'GET', '/api/assets')
+  assert.equal(afterDeleteRes.statusCode, 200)
+  assert.equal(afterDeleteRes._getJSONData().items.some((item: { assetKey: string }) => item.assetKey === 'cooling_tower_v1'), false)
+})
+
+test('asset management api stores ports and bindings, uploads model files, and publishes to equipment catalog', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/assets', {
+    assetKey: 'heat_pump_v1',
+    displayName: 'Heat Pump',
+    type: 'heat-pump',
+    defaultSystem: 'HW',
+    assetVersion: 1,
+    renderStyle: 'box',
+    bounds: { halfExtents: [1.2, 1.8, 1.1] },
+    modelUploadId: null,
+  })
+  const assetId = createRes._getJSONData().asset.id as string
+
+  const uploadRes = await request(app)
+    .post('/api/assets/uploads')
+    .attach('file', Buffer.from('glb-bytes'), 'model.glb')
+  assert.equal(uploadRes.status, 201)
+  assert.equal(uploadRes.body.upload.fileName, 'model.glb')
+  assert.match(uploadRes.body.upload.publicUrl, /^\/api\/assets\/uploads\/.+\/model\.glb$/)
+
+  const updateRes = await performRequest(app, 'PUT', `/api/assets/${assetId}`, {
+    assetKey: 'heat_pump_v1',
+    displayName: 'Heat Pump',
+    type: 'heat-pump',
+    defaultSystem: 'HW',
+    assetVersion: 1,
+    renderStyle: 'octahedron',
+    bounds: { halfExtents: [1.2, 1.8, 1.1] },
+    modelUploadId: uploadRes.body.upload.id,
+  })
+  assert.equal(updateRes.statusCode, 200)
+  assert.equal(updateRes._getJSONData().asset.modelUrl, uploadRes.body.upload.publicUrl)
+
+  const portsRes = await performRequest(app, 'PUT', `/api/assets/${assetId}/ports`, {
+    ports: [
+      { portKey: 'in', name: '入口', position: [-0.2, 0, 0], system: 'HW', direction: 'in' },
+      { portKey: 'out', name: '出口', position: [0.2, 0, 0], system: 'HW', direction: 'out' },
+    ],
+  })
+  assert.equal(portsRes.statusCode, 200)
+  assert.equal(portsRes._getJSONData().ports.length, 2)
+
+  const bindingsRes = await performRequest(app, 'PUT', `/api/assets/${assetId}/bindings`, {
+    bindings: [
+      { bindingType: 'device_identity', bindingKey: 'bacnet_device_id', bindingValue: '1001', note: 'demo' },
+      { bindingType: 'point_mapping', bindingKey: 'supply_temp', bindingValue: 'AI1', note: '' },
+    ],
+  })
+  assert.equal(bindingsRes.statusCode, 200)
+  assert.equal(bindingsRes._getJSONData().bindings.length, 2)
+
+  const detailRes = await performRequest(app, 'GET', `/api/assets/${assetId}`)
+  assert.equal(detailRes.statusCode, 200)
+  assert.equal(detailRes._getJSONData().asset.assetKey, 'heat_pump_v1')
+  assert.equal(detailRes._getJSONData().ports.length, 2)
+  assert.equal(detailRes._getJSONData().bindings.length, 2)
+
+  const publishRes = await performRequest(app, 'POST', `/api/assets/${assetId}/publish`)
+  assert.equal(publishRes.statusCode, 200)
+  assert.equal(publishRes._getJSONData().asset.status, 'published')
+
+  const versionsRes = await performRequest(app, 'GET', `/api/assets/${assetId}/versions`)
+  assert.equal(versionsRes.statusCode, 200)
+  assert.equal(versionsRes._getJSONData().items.length, 1)
+
+  const catalogRes = await performRequest(app, 'GET', '/api/equipment/catalog')
+  assert.equal(catalogRes.statusCode, 200)
+  assert.equal(catalogRes._getJSONData().assets.includes('heat_pump_v1'), true)
+
+  const equipmentAssetRes = await performRequest(app, 'GET', '/api/equipment/heat_pump_v1')
+  assert.equal(equipmentAssetRes.statusCode, 200)
+  assert.equal(equipmentAssetRes._getJSONData().assetId, 'heat_pump_v1')
+  assert.equal(equipmentAssetRes._getJSONData().modelGlb, true)
+
+  const equipmentPortsRes = await performRequest(app, 'GET', '/api/equipment/heat_pump_v1/ports')
+  assert.equal(equipmentPortsRes.statusCode, 200)
+  assert.equal(equipmentPortsRes._getJSONData().ports.length, 2)
+
+  const fileRes = await request(app).get(uploadRes.body.upload.publicUrl)
+  assert.equal(fileRes.status, 200)
+  assert.equal(fileRes.text, 'glb-bytes')
+
+  const archiveRes = await performRequest(app, 'POST', `/api/assets/${assetId}/archive`)
+  assert.equal(archiveRes.statusCode, 200)
+  assert.equal(archiveRes._getJSONData().asset.status, 'archived')
+
+  const archivedCatalogRes = await performRequest(app, 'GET', '/api/equipment/catalog')
+  assert.equal(archivedCatalogRes.statusCode, 200)
+  assert.equal(archivedCatalogRes._getJSONData().assets.includes('heat_pump_v1'), false)
 })
 
 test('GET /api/runtime/overview returns runtime summary fields', async () => {

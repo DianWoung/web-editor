@@ -37,7 +37,7 @@ function mapCatalogAsset(
     defaultSystem: asset.defaultSystem,
     halfExtents: asset.bounds.halfExtents,
     modelGlb: asset.modelGlb ?? false,
-    modelGlbUrl: asset.modelGlb ? `/equipment/${asset.assetId}/model.glb` : null,
+    modelGlbUrl: asset.modelUrl ?? (asset.modelGlb ? `/equipment/${asset.assetId}/model.glb` : null),
     renderStyle: asset.renderStyle ?? 'box',
     portsTemplate: ports.ports.map((port) => ({
       id: port.id,
