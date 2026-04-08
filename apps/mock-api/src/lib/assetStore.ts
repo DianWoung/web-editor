@@ -290,11 +290,7 @@ export function createAssetStore(dataRoot: string) {
     }
   }
 
-  function seedLegacyEquipmentIfNeeded() {
-    const countRow = db.prepare('SELECT COUNT(*) as count FROM equipment_assets').get() as { count: number }
-    if (countRow.count > 0) {
-      return
-    }
+  function syncLegacyEquipmentIfNeeded() {
     const catalogPath = path.join(dataRoot, 'equipment', 'catalog.json')
     if (!existsSync(catalogPath)) {
       return
@@ -316,6 +312,12 @@ export function createAssetStore(dataRoot: string) {
 
     transaction(() => {
       for (const assetKey of catalog.assets) {
+        const existing = db
+          .prepare('SELECT id FROM equipment_assets WHERE asset_key = ?')
+          .get(assetKey) as { id: string } | undefined
+        if (existing) {
+          continue
+        }
         const assetDir = path.join(dataRoot, 'equipment', assetKey)
         const asset = parseJsonFile(path.join(assetDir, 'asset.json'), assetJsonSchema)
         const ports = parseJsonFile(path.join(assetDir, 'ports.json'), portsFileSchema)
@@ -354,7 +356,7 @@ export function createAssetStore(dataRoot: string) {
     })
   }
 
-  seedLegacyEquipmentIfNeeded()
+  syncLegacyEquipmentIfNeeded()
 
   const insertAssetStmt = db.prepare(`
     INSERT INTO equipment_assets (
