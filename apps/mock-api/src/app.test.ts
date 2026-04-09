@@ -360,6 +360,35 @@ test('GET /api/equipment/:assetId and ports return persisted asset files', async
   assert.equal(portsRes._getJSONData().ports.length, 2)
 })
 
+test('GET /api/assets/models/:assetId serves a legacy model file when present', async () => {
+  const dataRoot = await setupFixture()
+  await mkdir(path.join(dataRoot, 'equipment', 'chw_pump_v1'), { recursive: true })
+  await writeFile(path.join(dataRoot, 'equipment', 'chw_pump_v1', 'model.glb'), 'legacy-glb')
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'chw_pump_v1', 'asset.json'),
+    JSON.stringify(
+      {
+        assetVersion: 1,
+        assetId: 'chw_pump_v1',
+        displayName: 'CHW Pump',
+        type: 'pump',
+        defaultSystem: 'CHW',
+        bounds: { halfExtents: [0.35, 0.35, 0.35] },
+        renderStyle: 'box',
+        modelGlb: true,
+      },
+      null,
+      2,
+    ),
+  )
+
+  const app = createApp({ dataRoot })
+  const modelRes = await request(app).get('/api/assets/models/chw_pump_v1')
+
+  assert.equal(modelRes.status, 200)
+  assert.equal(modelRes.text, 'legacy-glb')
+})
+
 test('asset management api supports draft create, update, list, and delete', async () => {
   const dataRoot = await setupFixture()
   const app = createApp({ dataRoot })

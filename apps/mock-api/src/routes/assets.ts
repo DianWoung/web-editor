@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { Router } from 'express'
 import multer from 'multer'
 import type { ZodError } from 'zod'
@@ -71,6 +73,17 @@ export function createAssetsRouter(dataRoot: string, assetStore: AssetStore) {
       res.send(file.buffer)
     } catch (error) {
       next(error)
+    }
+  })
+
+  router.get('/models/:assetId', async (req, res, next) => {
+    try {
+      const modelPath = path.join(dataRoot, 'equipment', req.params.assetId, 'model.glb')
+      const buffer = await readFile(modelPath)
+      res.type('model/gltf-binary')
+      res.send(buffer)
+    } catch {
+      next(new HttpError(404, `模型文件不存在：${req.params.assetId}`))
     }
   })
 

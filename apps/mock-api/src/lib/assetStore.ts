@@ -106,6 +106,14 @@ function parseJsonFile<T>(filePath: string, schema: { parse: (value: unknown) =>
   return schema.parse(JSON.parse(raw))
 }
 
+function getLegacyModelUrl(dataRoot: string, assetKey: string, declaresModelGlb: boolean | undefined) {
+  if (!declaresModelGlb) {
+    return null
+  }
+  const modelPath = path.join(dataRoot, 'equipment', assetKey, 'model.glb')
+  return existsSync(modelPath) ? `/api/assets/models/${assetKey}` : null
+}
+
 function toAssetListItem(row: PersistedAssetRow): AssetListItem {
   return {
     id: row.id,
@@ -312,15 +320,27 @@ export function createAssetStore(dataRoot: string) {
 
     transaction(() => {
       for (const assetKey of catalog.assets) {
-        const existing = db
-          .prepare('SELECT id FROM equipment_assets WHERE asset_key = ?')
-          .get(assetKey) as { id: string } | undefined
-        if (existing) {
-          continue
-        }
         const assetDir = path.join(dataRoot, 'equipment', assetKey)
         const asset = parseJsonFile(path.join(assetDir, 'asset.json'), assetJsonSchema)
         const ports = parseJsonFile(path.join(assetDir, 'ports.json'), portsFileSchema)
+        const legacyModelUrl = getLegacyModelUrl(dataRoot, asset.assetId, asset.modelGlb)
+        const existing = db
+          .prepare('SELECT id, model_url, status FROM equipment_assets WHERE asset_key = ?')
+          .get(assetKey) as { id: string; model_url: string | null; status: string } | undefined
+        if (existing) {
+          const shouldNormalizeLegacyModelUrl =
+            existing.model_url === null ||
+            existing.model_url === `/api/assets/models/${asset.assetId}`
+
+          if (shouldNormalizeLegacyModelUrl && existing.model_url !== legacyModelUrl) {
+            db.prepare('UPDATE equipment_assets SET model_url = ?, updated_at = ? WHERE id = ?').run(
+              legacyModelUrl,
+              now,
+              existing.id,
+            )
+          }
+          continue
+        }
         const assetId = createId('asset')
         insertAsset.run(
           assetId,
@@ -333,7 +353,7 @@ export function createAssetStore(dataRoot: string) {
           asset.bounds.halfExtents[0],
           asset.bounds.halfExtents[1],
           asset.bounds.halfExtents[2],
-          asset.modelGlb ? `/api/assets/models/${asset.assetId}` : null,
+          legacyModelUrl,
           null,
           'published',
           now,

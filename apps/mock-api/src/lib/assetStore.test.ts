@@ -25,7 +25,7 @@ async function setupLegacyEquipmentFixture() {
         defaultSystem: 'CHW',
         bounds: { halfExtents: [1, 1, 1] },
         renderStyle: 'box',
-        modelGlb: false,
+        modelGlb: true,
       },
       null,
       2,
@@ -43,6 +43,47 @@ async function setupLegacyEquipmentFixture() {
   )
   return root
 }
+
+test('createAssetStore only exposes a legacy modelUrl when model.glb exists on disk', async () => {
+  const dataRoot = await setupLegacyEquipmentFixture()
+  await mkdir(path.join(dataRoot, 'equipment', 'legacy_model_v1'), { recursive: true })
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'catalog.json'),
+    JSON.stringify({ assets: ['legacy_pump_v1', 'legacy_model_v1'] }, null, 2),
+  )
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'legacy_model_v1', 'asset.json'),
+    JSON.stringify(
+      {
+        assetVersion: 1,
+        assetId: 'legacy_model_v1',
+        displayName: 'Legacy Model',
+        type: 'pump',
+        defaultSystem: 'CHW',
+        bounds: { halfExtents: [1, 1, 1] },
+        renderStyle: 'box',
+        modelGlb: true,
+      },
+      null,
+      2,
+    ),
+  )
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'legacy_model_v1', 'ports.json'),
+    JSON.stringify({ ports: [] }, null, 2),
+  )
+  await writeFile(path.join(dataRoot, 'equipment', 'legacy_model_v1', 'model.glb'), 'glb-bytes')
+
+  const store = createAssetStore(dataRoot)
+  const list = store.listAssets('all').items
+  const noFileModel = list.find((item) => item.assetKey === 'legacy_pump_v1')
+  const withFileModel = list.find((item) => item.assetKey === 'legacy_model_v1')
+
+  assert.equal(noFileModel?.modelUrl, null)
+  assert.equal(withFileModel?.modelUrl, '/api/assets/models/legacy_model_v1')
+  assert.equal(store.getPublishedAssetJson('legacy_pump_v1').modelGlb, false)
+  assert.equal(store.getPublishedAssetJson('legacy_model_v1').modelGlb, true)
+})
 
 test('createAssetStore imports missing legacy equipment even when the database already has assets', async () => {
   const dataRoot = await setupLegacyEquipmentFixture()
