@@ -139,3 +139,86 @@ test('createAssetStore imports missing legacy equipment even when the database a
 
   assert.deepEqual(assets.sort(), ['custom_draft_v1', 'legacy_pump_v1'])
 })
+
+test('createAssetStore persists connector semantics and still projects published ports compatibly', async () => {
+  const dataRoot = await mkdtemp(path.join(tmpdir(), 'asset-store-'))
+  const store = createAssetStore(dataRoot)
+
+  const created = store.createAssetDraft({
+    assetKey: 'semantic_heat_pump_v1',
+    displayName: 'Semantic Heat Pump',
+    type: 'heat-pump',
+    defaultSystem: 'HW',
+    assetVersion: 1,
+    renderStyle: 'box',
+    bounds: { halfExtents: [1, 1, 1] },
+    modelUploadId: null,
+  })
+
+  const replaced = store.replaceAssetPorts(created.asset.id, [
+    {
+      portKey: 'supply_out',
+      name: '供水出水',
+      position: [0.6, 0.1, 0],
+      system: 'HW',
+      direction: 'out',
+      role: 'supply',
+      medium: 'water',
+      side: 'right',
+      groupKey: 'water_loop',
+      required: true,
+      normal: [1, 0, 0],
+    },
+  ])
+
+  assert.equal(replaced.connectors.length, 1)
+  assert.deepEqual(replaced.connectors[0], {
+    id: 'supply_out',
+    connectorKey: 'supply_out',
+    portKey: 'supply_out',
+    name: '供水出水',
+    system: 'HW',
+    role: 'supply',
+    medium: 'water',
+    direction: 'out',
+    side: 'right',
+    groupKey: 'water_loop',
+    required: true,
+    sortOrder: 0,
+    geometry: {
+      anchor: [0.6, 0.1, 0],
+      normal: [1, 0, 0],
+    },
+  })
+
+  const detail = store.getAsset(created.asset.id)
+  assert.equal(detail.connectors.length, 1)
+  assert.equal(detail.ports.length, 1)
+  assert.equal(detail.connectors[0].role, 'supply')
+  assert.equal(detail.connectors[0].medium, 'water')
+  assert.equal(detail.connectors[0].side, 'right')
+  assert.equal(detail.connectors[0].groupKey, 'water_loop')
+  assert.equal(detail.connectors[0].required, true)
+  assert.deepEqual(detail.ports[0], {
+    id: 'supply_out',
+    portKey: 'supply_out',
+    name: '供水出水',
+    position: [0.6, 0.1, 0],
+    system: 'HW',
+    direction: 'out',
+    sortOrder: 0,
+  })
+
+  store.publishAsset(created.asset.id)
+  assert.deepEqual(store.getPublishedPortsJson('semantic_heat_pump_v1'), {
+    ports: [
+      {
+        id: 'supply_out',
+        name: '供水出水',
+        position: [0.6, 0.1, 0],
+        system: 'HW',
+        direction: 'out',
+      },
+    ],
+  })
+})

@@ -36,7 +36,19 @@ export async function updateAsset(assetId: string, input: AssetMutationInput) {
 
 export async function replaceAssetPorts(
   assetId: string,
-  ports: Array<{ portKey: string; name: string; position: [number, number, number]; system: string; direction: string }>,
+  ports: Array<{
+    portKey: string
+    name: string
+    position: [number, number, number]
+    system: string
+    direction: string
+    role?: string
+    medium?: string | null
+    side?: string | null
+    groupKey?: string | null
+    required?: boolean
+    normal?: [number, number, number] | null
+  }>,
 ) {
   return assetPortsResponseSchema.parse(
     await apiRequest<unknown>(`/assets/${encodeURIComponent(assetId)}/ports`, {

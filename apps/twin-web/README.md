@@ -7,7 +7,7 @@
 ## 路由（当前）
 
 - `/` → 重定向到 **`/scenes`**
-- **`/assets`**：资产管理中心（新建、编辑、端口配置、绑定占位、模型上传、发布/下线/删除）
+- **`/assets`**：资产管理中心（新建、编辑、连接点配置、绑定占位、模型上传、发布/下线/删除）
 - **`/scenes`**：命名场景管理（创建、列表预览、进入编辑）
 - **`/scenes/:sceneId/overview`**：命名场景运行态总览（KPI、流动状态、设备详情跳转）
 - **`/scenes/:sceneId/preview`**：命名场景只读预览（可操作视角、开启流动状态，不可编辑）
@@ -27,7 +27,7 @@
 ## 场景与资产版本
 
 - **`scene.json` 根字段 `version`**：场景文件格式版本（整数），用于后续迁移；与设备 `asset.json` 中的 **`assetVersion`** 独立。
-- **`assetVersion`**：单个设备模板（几何/端口）变更时递增；旧场景仍可加载，但若端口定义不兼容需人工重绑或脚本迁移。
+- **`assetVersion`**：单个设备模板（几何/连接点）变更时递增；旧场景仍可加载，但若连接定义不兼容需人工重绑或脚本迁移。
 
 ## 管线 MVP 档位
 
@@ -39,7 +39,7 @@
 
 - `GET /api/assets` / `POST /api/assets`：资产草稿列表与创建
 - `GET /api/assets/:assetId` / `PUT /api/assets/:assetId`：资产详情与基础配置更新
-- `PUT /api/assets/:assetId/ports`：端口配置持久化
+- `PUT /api/assets/:assetId/ports`：连接点配置持久化；当前仍沿用 `ports` 路径名以兼容既有消费者
 - `PUT /api/assets/:assetId/bindings`：绑定占位持久化
 - `POST /api/assets/uploads`：模型文件上传
 - `POST /api/assets/:assetId/publish`：发布资产到设备库
@@ -53,12 +53,12 @@
   - `bounds.halfExtents`：`[hx, hy, hz]`（局部空间半长，用于占位 Box 与碰撞）
   - `modelGlb`（可选）：为 `true` 时前端通过后端返回的模型地址加载 GLB；失败则回退占位体，并在界面提示
   - `modelUrl`（可选）：已发布模型的真实可访问地址
-- `GET /api/equipment/{assetId}/ports`：`ports[].id|name|position|system|direction`，其中 **`position` 为设备局部坐标**
+- `GET /api/equipment/{assetId}/ports`：兼容投影接口，继续返回 `ports[].id|name|position|system|direction`，其中 **`position` 为设备局部坐标**
 - `GET /api/scene` / `PUT /api/scene`：当前工作场景
 - `GET /api/scene/library` / `GET|PUT /api/scene/library/:sceneId`：命名场景列表与内容
 - `POST /api/scene/library/:sceneId/load`：把命名场景载入当前工作场景
 
-编排器设备库已从“浏览器本地导入资产包”切回“已发布资产只读消费”模式。新增设备资产请先到 `/assets` 完成上传、配置和发布。
+编排器设备库已从“浏览器本地导入资产包”切回“已发布资产只读消费”模式。新增设备资产请先到 `/assets` 完成上传、连接点配置和发布。
 
 ## 数据模型映射（与《场景编辑器方案》5.1）
 

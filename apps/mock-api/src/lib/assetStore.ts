@@ -32,6 +32,12 @@ type AssetPortInput = {
   position: [number, number, number]
   system: string
   direction: string
+  role?: string
+  medium?: string | null
+  side?: string | null
+  groupKey?: string | null
+  required?: boolean
+  normal?: [number, number, number] | null
 }
 
 type AssetBindingInput = {
@@ -67,6 +73,14 @@ type PersistedPortRow = {
   position_z: number
   system: string
   direction: string
+  role: string | null
+  medium: string | null
+  side: string | null
+  group_key: string | null
+  required: number | null
+  normal_x: number | null
+  normal_y: number | null
+  normal_z: number | null
   sort_order: number
 }
 
@@ -133,6 +147,65 @@ function toAssetListItem(row: PersistedAssetRow): AssetListItem {
   }
 }
 
+function ensureTableColumns(
+  db: DatabaseSync,
+  tableName: string,
+  columns: Array<{ name: string; definition: string }>,
+) {
+  const existing = new Set(
+    (
+      db.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{
+        name: string
+      }>
+    ).map((column) => column.name),
+  )
+
+  for (const column of columns) {
+    if (existing.has(column.name)) {
+      continue
+    }
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${column.name} ${column.definition}`)
+  }
+}
+
+function toConnector(row: PersistedPortRow) {
+  const normal =
+    row.normal_x === null || row.normal_y === null || row.normal_z === null
+      ? null
+      : ([row.normal_x, row.normal_y, row.normal_z] as [number, number, number])
+
+  return {
+    id: row.port_key,
+    connectorKey: row.port_key,
+    portKey: row.port_key,
+    name: row.name,
+    system: row.system,
+    role: row.role ?? 'generic',
+    medium: row.medium,
+    direction: row.direction,
+    side: row.side,
+    groupKey: row.group_key,
+    required: Boolean(row.required ?? 0),
+    sortOrder: row.sort_order,
+    geometry: {
+      anchor: [row.position_x, row.position_y, row.position_z] as [number, number, number],
+      normal,
+    },
+  }
+}
+
+function toPortProjection(row: ReturnType<typeof toConnector>) {
+  return {
+    id: row.portKey,
+    portKey: row.portKey,
+    name: row.name,
+    position: row.geometry.anchor,
+    system: row.system,
+    direction: row.direction,
+    sortOrder: row.sortOrder,
+  }
+}
+
 export function createAssetStore(dataRoot: string) {
   mkdirSync(dataRoot, { recursive: true })
   const dbPath = path.join(dataRoot, 'asset-center.sqlite')
@@ -169,6 +242,14 @@ export function createAssetStore(dataRoot: string) {
       position_z REAL NOT NULL,
       system TEXT NOT NULL,
       direction TEXT NOT NULL,
+      role TEXT,
+      medium TEXT,
+      side TEXT,
+      group_key TEXT,
+      required INTEGER,
+      normal_x REAL,
+      normal_y REAL,
+      normal_z REAL,
       sort_order INTEGER NOT NULL,
       FOREIGN KEY(asset_id) REFERENCES equipment_assets(id) ON DELETE CASCADE
     );
@@ -206,6 +287,17 @@ export function createAssetStore(dataRoot: string) {
       FOREIGN KEY(asset_id) REFERENCES equipment_assets(id) ON DELETE SET NULL
     );
   `)
+
+  ensureTableColumns(db, 'equipment_ports', [
+    { name: 'role', definition: 'TEXT' },
+    { name: 'medium', definition: 'TEXT' },
+    { name: 'side', definition: 'TEXT' },
+    { name: 'group_key', definition: 'TEXT' },
+    { name: 'required', definition: 'INTEGER' },
+    { name: 'normal_x', definition: 'REAL' },
+    { name: 'normal_y', definition: 'REAL' },
+    { name: 'normal_z', definition: 'REAL' },
+  ])
 
   function transaction<T>(run: () => T): T {
     db.exec('BEGIN')
@@ -245,19 +337,15 @@ export function createAssetStore(dataRoot: string) {
     return row
   }
 
-  function listPorts(assetId: string) {
+  function listConnectors(assetId: string) {
     const rows = db
       .prepare('SELECT * FROM equipment_ports WHERE asset_id = ? ORDER BY sort_order ASC, id ASC')
       .all(assetId) as PersistedPortRow[]
-    return rows.map((row) => ({
-      id: row.port_key,
-      portKey: row.port_key,
-      name: row.name,
-      position: [row.position_x, row.position_y, row.position_z] as [number, number, number],
-      system: row.system,
-      direction: row.direction,
-      sortOrder: row.sort_order,
-    }))
+    return rows.map(toConnector)
+  }
+
+  function listPorts(assetId: string) {
+    return listConnectors(assetId).map(toPortProjection)
   }
 
   function listBindings(assetId: string) {
@@ -291,9 +379,11 @@ export function createAssetStore(dataRoot: string) {
 
   function getAssetDetail(assetId: string): AssetDetail {
     const asset = toAssetListItem(getAssetRow(assetId))
+    const connectors = listConnectors(assetId)
     return {
       asset,
-      ports: listPorts(assetId),
+      connectors,
+      ports: connectors.map(toPortProjection),
       bindings: listBindings(assetId),
     }
   }
@@ -313,8 +403,9 @@ export function createAssetStore(dataRoot: string) {
     `)
     const insertPort = db.prepare(`
       INSERT INTO equipment_ports (
-        asset_id, port_key, name, position_x, position_y, position_z, system, direction, sort_order
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        asset_id, port_key, name, position_x, position_y, position_z, system, direction,
+        role, medium, side, group_key, required, normal_x, normal_y, normal_z, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     const now = new Date().toISOString()
 
@@ -369,6 +460,14 @@ export function createAssetStore(dataRoot: string) {
             port.position[2],
             port.system,
             port.direction,
+            'generic',
+            null,
+            null,
+            null,
+            0,
+            null,
+            null,
+            null,
             index,
           )
         }
@@ -393,8 +492,9 @@ export function createAssetStore(dataRoot: string) {
   const replacePortsDeleteStmt = db.prepare('DELETE FROM equipment_ports WHERE asset_id = ?')
   const replacePortsInsertStmt = db.prepare(`
     INSERT INTO equipment_ports (
-      asset_id, port_key, name, position_x, position_y, position_z, system, direction, sort_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      asset_id, port_key, name, position_x, position_y, position_z, system, direction,
+      role, medium, side, group_key, required, normal_x, normal_y, normal_z, sort_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const replaceBindingsDeleteStmt = db.prepare('DELETE FROM equipment_bindings WHERE asset_id = ?')
   const replaceBindingsInsertStmt = db.prepare(`
@@ -506,11 +606,20 @@ export function createAssetStore(dataRoot: string) {
             port.position[2],
             port.system,
             port.direction,
+            port.role ?? 'generic',
+            port.medium ?? null,
+            port.side ?? null,
+            port.groupKey ?? null,
+            port.required ? 1 : 0,
+            port.normal?.[0] ?? null,
+            port.normal?.[1] ?? null,
+            port.normal?.[2] ?? null,
             index,
           )
         }
       })
-      return { ports: listPorts(assetId) }
+      const connectors = listConnectors(assetId)
+      return { connectors, ports: connectors.map(toPortProjection) }
     },
 
     replaceAssetBindings(assetId: string, bindings: AssetBindingInput[]) {
@@ -568,6 +677,7 @@ export function createAssetStore(dataRoot: string) {
       const publishedAt = new Date().toISOString()
       const snapshotJson = {
         asset: detail.asset,
+        connectors: detail.connectors,
         ports: detail.ports,
         bindings: detail.bindings,
       }
@@ -626,12 +736,12 @@ export function createAssetStore(dataRoot: string) {
     getPublishedPortsJson(assetKey: string) {
       const asset = getAssetRowByKey(assetKey, true)
       return {
-        ports: listPorts(asset.id).map((port) => ({
-          id: port.portKey,
-          name: port.name,
-          position: port.position,
-          system: port.system,
-          direction: port.direction,
+        ports: listConnectors(asset.id).map((connector) => ({
+          id: connector.portKey,
+          name: connector.name,
+          position: connector.geometry.anchor,
+          system: connector.system,
+          direction: connector.direction,
         })),
       }
     },

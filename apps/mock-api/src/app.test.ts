@@ -473,12 +473,39 @@ test('asset management api stores ports and bindings, uploads model files, and p
 
   const portsRes = await performRequest(app, 'PUT', `/api/assets/${assetId}/ports`, {
     ports: [
-      { portKey: 'in', name: '入口', position: [-0.2, 0, 0], system: 'HW', direction: 'in' },
-      { portKey: 'out', name: '出口', position: [0.2, 0, 0], system: 'HW', direction: 'out' },
+      {
+        portKey: 'in',
+        name: '入口',
+        position: [-0.2, 0, 0],
+        system: 'HW',
+        direction: 'in',
+        role: 'return',
+        medium: 'water',
+        side: 'left',
+        groupKey: 'load_loop',
+        required: true,
+        normal: [-1, 0, 0],
+      },
+      {
+        portKey: 'out',
+        name: '出口',
+        position: [0.2, 0, 0],
+        system: 'HW',
+        direction: 'out',
+        role: 'supply',
+        medium: 'water',
+        side: 'right',
+        groupKey: 'load_loop',
+        required: true,
+        normal: [1, 0, 0],
+      },
     ],
   })
   assert.equal(portsRes.statusCode, 200)
   assert.equal(portsRes._getJSONData().ports.length, 2)
+  assert.equal(portsRes._getJSONData().connectors.length, 2)
+  assert.equal(portsRes._getJSONData().connectors[0].role, 'return')
+  assert.deepEqual(portsRes._getJSONData().connectors[0].geometry.normal, [-1, 0, 0])
 
   const bindingsRes = await performRequest(app, 'PUT', `/api/assets/${assetId}/bindings`, {
     bindings: [
@@ -492,8 +519,12 @@ test('asset management api stores ports and bindings, uploads model files, and p
   const detailRes = await performRequest(app, 'GET', `/api/assets/${assetId}`)
   assert.equal(detailRes.statusCode, 200)
   assert.equal(detailRes._getJSONData().asset.assetKey, 'heat_pump_v1')
+  assert.equal(detailRes._getJSONData().connectors.length, 2)
   assert.equal(detailRes._getJSONData().ports.length, 2)
   assert.equal(detailRes._getJSONData().bindings.length, 2)
+  assert.equal(detailRes._getJSONData().connectors[1].role, 'supply')
+  assert.equal(detailRes._getJSONData().connectors[1].medium, 'water')
+  assert.equal(detailRes._getJSONData().connectors[1].groupKey, 'load_loop')
 
   const publishRes = await performRequest(app, 'POST', `/api/assets/${assetId}/publish`)
   assert.equal(publishRes.statusCode, 200)
@@ -515,6 +546,13 @@ test('asset management api stores ports and bindings, uploads model files, and p
   const equipmentPortsRes = await performRequest(app, 'GET', '/api/equipment/heat_pump_v1/ports')
   assert.equal(equipmentPortsRes.statusCode, 200)
   assert.equal(equipmentPortsRes._getJSONData().ports.length, 2)
+  assert.deepEqual(equipmentPortsRes._getJSONData().ports[0], {
+    id: 'in',
+    name: '入口',
+    position: [-0.2, 0, 0],
+    system: 'HW',
+    direction: 'in',
+  })
 
   const fileRes = await request(app).get(uploadRes.body.upload.publicUrl)
   assert.equal(fileRes.status, 200)

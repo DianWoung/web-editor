@@ -3,9 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AssetBindingsEditor } from '@/components/assets/AssetBindingsEditor'
 import { AssetForm } from '@/components/assets/AssetForm'
 import { AssetList } from '@/components/assets/AssetList'
-import { AssetPortsEditor } from '@/components/assets/AssetPortsEditor'
 import { AssetUploadPanel } from '@/components/assets/AssetUploadPanel'
-import type { AssetBinding, AssetMutationInput, AssetPort, AssetUpload } from '@/schemas/assets'
+import { ConnectorDetailForm } from '@/components/assets/ConnectorDetailForm'
+import { ConnectorList } from '@/components/assets/ConnectorList'
+import type { AssetBinding, AssetConnector, AssetMutationInput, AssetUpload } from '@/schemas/assets'
 import {
   createAssetDraft,
   deleteAsset,
@@ -33,14 +34,42 @@ function createEmptyDraft(): AssetMutationInput {
   }
 }
 
-function portsToJson(ports: AssetPort[]) {
+function createEmptyConnector(): AssetConnector {
+  const connectorKey = `connector_${Math.random().toString(36).slice(2, 6)}`
+  return {
+    id: connectorKey,
+    connectorKey,
+    portKey: connectorKey,
+    name: '新连接点',
+    system: 'CHW',
+    role: 'generic',
+    medium: 'water',
+    direction: 'in',
+    side: null,
+    groupKey: null,
+    required: false,
+    sortOrder: 0,
+    geometry: {
+      anchor: [0, 0, 0],
+      normal: [0, 0, 1],
+    },
+  }
+}
+
+function connectorsToJson(connectors: AssetConnector[]) {
   return JSON.stringify(
-    ports.map((port) => ({
-      portKey: port.portKey,
-      name: port.name,
-      position: port.position,
-      system: port.system,
-      direction: port.direction,
+    connectors.map((connector) => ({
+      portKey: connector.portKey,
+      name: connector.name,
+      position: connector.geometry.anchor,
+      system: connector.system,
+      direction: connector.direction,
+      role: connector.role,
+      medium: connector.medium,
+      side: connector.side,
+      groupKey: connector.groupKey,
+      required: connector.required,
+      normal: connector.geometry.normal ?? null,
     })),
     null,
     2,
@@ -52,7 +81,8 @@ export function AssetsPage() {
   const [items, setItems] = useState<Awaited<ReturnType<typeof listAssets>>['items']>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [assetDraft, setAssetDraft] = useState<AssetMutationInput>(createEmptyDraft())
-  const [portsDraft, setPortsDraft] = useState<Array<{ portKey: string; name: string; position: [number, number, number]; system: string; direction: string }>>([])
+  const [connectorsDraft, setConnectorsDraft] = useState<AssetConnector[]>([])
+  const [selectedConnectorKey, setSelectedConnectorKey] = useState<string | null>(null)
   const [portsMode, setPortsMode] = useState<'table' | 'json'>('table')
   const [portsJson, setPortsJson] = useState('[]')
   const [bindingsDraft, setBindingsDraft] = useState<Array<Omit<AssetBinding, 'id'>>>([])
@@ -96,7 +126,8 @@ export function AssetsPage() {
   useEffect(() => {
     if (!selectedAssetId) {
       setAssetDraft(createEmptyDraft())
-      setPortsDraft([])
+      setConnectorsDraft([])
+      setSelectedConnectorKey(null)
       setPortsJson('[]')
       setBindingsDraft([])
       setModelUpload(null)
@@ -116,16 +147,30 @@ export function AssetsPage() {
           bounds: detail.asset.bounds,
           modelUploadId: null,
         })
-        setPortsDraft(
-          detail.ports.map((port) => ({
-            portKey: port.portKey,
-            name: port.name,
-            position: port.position,
-            system: port.system,
-            direction: port.direction,
-          })),
-        )
-        setPortsJson(portsToJson(detail.ports))
+        const nextConnectors =
+          detail.connectors.length > 0
+            ? detail.connectors
+            : detail.ports.map((port, index) => ({
+                id: port.id,
+                connectorKey: port.portKey,
+                portKey: port.portKey,
+                name: port.name,
+                system: port.system,
+                role: 'generic',
+                medium: null,
+                direction: port.direction,
+                side: null,
+                groupKey: null,
+                required: false,
+                sortOrder: index,
+                geometry: {
+                  anchor: port.position,
+                  normal: null,
+                },
+              }))
+        setConnectorsDraft(nextConnectors)
+        setSelectedConnectorKey(nextConnectors[0]?.connectorKey ?? null)
+        setPortsJson(connectorsToJson(nextConnectors))
         setBindingsDraft(
           detail.bindings.map((binding) => ({
             bindingType: binding.bindingType,
@@ -204,26 +249,52 @@ export function AssetsPage() {
     try {
       const nextPorts =
         portsMode === 'table'
-          ? portsDraft
-          : (JSON.parse(portsJson) as Array<{ portKey: string; name: string; position: [number, number, number]; system: string; direction: string }>)
+          ? connectorsDraft.map((connector) => ({
+              portKey: connector.portKey,
+              name: connector.name,
+              position: connector.geometry.anchor,
+              system: connector.system,
+              direction: connector.direction,
+              role: connector.role,
+              medium: connector.medium,
+              side: connector.side,
+              groupKey: connector.groupKey,
+              required: connector.required,
+              normal: connector.geometry.normal ?? null,
+            }))
+          : (JSON.parse(portsJson) as Array<{
+              portKey: string
+              name: string
+              position: [number, number, number]
+              system: string
+              direction: string
+              role?: string
+              medium?: string | null
+              side?: string | null
+              groupKey?: string | null
+              required?: boolean
+              normal?: [number, number, number] | null
+            }>)
       const result = await replaceAssetPorts(selectedAssetId, nextPorts)
-      setPortsDraft(
-        result.ports.map((port) => ({
-          portKey: port.portKey,
-          name: port.name,
-          position: port.position,
-          system: port.system,
-          direction: port.direction,
-        })),
+      setConnectorsDraft(result.connectors)
+      setSelectedConnectorKey((current) =>
+        current && result.connectors.some((connector) => connector.connectorKey === current)
+          ? current
+          : result.connectors[0]?.connectorKey ?? null,
       )
-      setPortsJson(portsToJson(result.ports))
-      setMessage(`已保存 ${result.ports.length} 个端口`)
+      setPortsJson(connectorsToJson(result.connectors))
+      setMessage(`已保存 ${result.connectors.length} 个连接点`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setSaving(false)
     }
   }
+
+  const selectedConnector = useMemo(
+    () => connectorsDraft.find((connector) => connector.connectorKey === selectedConnectorKey) ?? null,
+    [connectorsDraft, selectedConnectorKey],
+  )
 
   const handleSaveBindings = async () => {
     if (!selectedAssetId) return
@@ -368,16 +439,71 @@ export function AssetsPage() {
           <div className="assets-editor-grid">
             <div className="assets-editor-column">
               <AssetForm value={assetDraft} disabled={saving || loadingDetail} onChange={setAssetDraft} onSave={handleSaveBasic} />
-              <AssetPortsEditor
-                mode={portsMode}
-                ports={portsDraft}
-                jsonValue={portsJson}
-                disabled={saving || loadingDetail}
-                onChangeMode={setPortsMode}
-                onChangePorts={setPortsDraft}
-                onChangeJson={setPortsJson}
-                onSave={handleSavePorts}
-              />
+              <section className="assets-panel">
+                <div className="assets-panel-header">
+                  <div>
+                    <h2>连接点配置</h2>
+                    <p className="muted small">默认按语义编辑；高级模式支持直接粘贴 JSON。</p>
+                  </div>
+                  <div className="assets-inline-actions">
+                    <button type="button" className={portsMode === 'table' ? 'primary' : 'secondary'} onClick={() => setPortsMode('table')}>
+                      表单模式
+                    </button>
+                    <button type="button" className={portsMode === 'json' ? 'primary' : 'secondary'} onClick={() => setPortsMode('json')}>
+                      JSON 模式
+                    </button>
+                    <button type="button" className="secondary" onClick={handleSavePorts} disabled={saving || loadingDetail}>
+                      保存连接点
+                    </button>
+                  </div>
+                </div>
+                {portsMode === 'table' ? (
+                  <div className="assets-editor-grid">
+                    <div className="assets-editor-column">
+                      <ConnectorList
+                        connectors={connectorsDraft}
+                        selectedConnectorKey={selectedConnectorKey}
+                        disabled={saving || loadingDetail}
+                        onSelectConnector={setSelectedConnectorKey}
+                        onAddConnector={() => {
+                          const nextConnector = {
+                            ...createEmptyConnector(),
+                            sortOrder: connectorsDraft.length,
+                          }
+                          setConnectorsDraft([...connectorsDraft, nextConnector])
+                          setSelectedConnectorKey(nextConnector.connectorKey)
+                        }}
+                        onRemoveConnector={(connectorKey) => {
+                          const nextConnectors = connectorsDraft
+                            .filter((connector) => connector.connectorKey !== connectorKey)
+                            .map((connector, index) => ({ ...connector, sortOrder: index }))
+                          setConnectorsDraft(nextConnectors)
+                          setSelectedConnectorKey(nextConnectors[0]?.connectorKey ?? null)
+                        }}
+                      />
+                    </div>
+                    <div className="assets-editor-column">
+                      <ConnectorDetailForm
+                        connector={selectedConnector}
+                        disabled={saving || loadingDetail}
+                        onChange={(nextConnector) => {
+                          setConnectorsDraft(
+                            connectorsDraft.map((connector) =>
+                              connector.connectorKey === selectedConnectorKey ? nextConnector : connector,
+                            ),
+                          )
+                          setSelectedConnectorKey(nextConnector.connectorKey)
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <label className="assets-json-editor">
+                    <span>连接点 JSON</span>
+                    <textarea aria-label="连接点 JSON" rows={12} value={portsJson} onChange={(e) => setPortsJson(e.target.value)} />
+                  </label>
+                )}
+              </section>
             </div>
             <div className="assets-editor-column">
               <AssetUploadPanel

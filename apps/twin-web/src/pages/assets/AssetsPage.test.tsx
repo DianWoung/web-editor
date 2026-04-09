@@ -53,6 +53,26 @@ function makeAsset(id = 'asset-1', status: 'draft' | 'published' | 'archived' = 
 function makeDetail(status: 'draft' | 'published' | 'archived' = 'draft') {
   return {
     asset: makeAsset('asset-1', status),
+    connectors: [
+      {
+        id: 'in',
+        connectorKey: 'in',
+        portKey: 'in',
+        name: '入口',
+        system: 'HW',
+        role: 'return',
+        medium: 'water',
+        direction: 'in',
+        side: 'left',
+        groupKey: 'load_loop',
+        required: true,
+        sortOrder: 0,
+        geometry: {
+          anchor: [-0.2, 0, 0] as [number, number, number],
+          normal: [-1, 0, 0] as [number, number, number],
+        },
+      },
+    ],
     ports: [
       {
         id: 'in',
@@ -87,7 +107,7 @@ describe('AssetsPage', () => {
     assetPageMocks.listAssetVersions.mockResolvedValue({ items: [] })
     assetPageMocks.createAssetDraft.mockResolvedValue(makeDetail())
     assetPageMocks.updateAsset.mockResolvedValue(makeDetail())
-    assetPageMocks.replaceAssetPorts.mockResolvedValue({ ports: makeDetail().ports })
+    assetPageMocks.replaceAssetPorts.mockResolvedValue({ ports: makeDetail().ports, connectors: makeDetail().connectors })
     assetPageMocks.replaceAssetBindings.mockResolvedValue({ bindings: makeDetail().bindings })
     assetPageMocks.uploadAssetModel.mockResolvedValue({
       upload: {
@@ -152,9 +172,11 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.updateAsset.mock.calls[0]?.[1].displayName, 'Heat Pump Updated')
     })
 
-    fireEvent.click(screen.getByRole('button', { name: '保存端口' }))
+    fireEvent.change(screen.getByLabelText('连接点角色'), { target: { value: 'supply' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存连接点' }))
     await waitFor(() => {
       assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1].length, 1)
+      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][0]?.role, 'supply')
     })
 
     fireEvent.click(screen.getByRole('button', { name: '保存绑定' }))
@@ -172,7 +194,7 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.archiveAsset.mock.calls[0]?.[0], 'asset-1')
     })
 
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0]!)
     await waitFor(() => {
       assert.equal(assetPageMocks.deleteAsset.mock.calls[0]?.[0], 'asset-1')
     })
@@ -196,5 +218,45 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.uploadAssetModel.mock.calls[0]?.[0].name, 'model.glb')
     })
     await screen.findByText(/\/api\/assets\/uploads\/upload-1\/model\.glb/)
+  })
+
+  it('renders connector semantics and allows switching the selected connector', async () => {
+    assetPageMocks.getAssetDetail.mockResolvedValue({
+      ...makeDetail(),
+      connectors: [
+        ...makeDetail().connectors,
+        {
+          id: 'out',
+          connectorKey: 'out',
+          portKey: 'out',
+          name: '出口',
+          system: 'HW',
+          role: 'supply',
+          medium: 'water',
+          direction: 'out',
+          side: 'right',
+          groupKey: 'load_loop',
+          required: true,
+          sortOrder: 1,
+          geometry: {
+            anchor: [0.2, 0, 0] as [number, number, number],
+            normal: [1, 0, 0] as [number, number, number],
+          },
+        },
+      ],
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/assets']}>
+        <Routes>
+          <Route path="/assets" element={<AssetsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('heading', { name: 'Heat Pump' })
+    await screen.findByDisplayValue('return')
+    fireEvent.click(screen.getByRole('button', { name: /出口/ }))
+    await screen.findByDisplayValue('supply')
   })
 })

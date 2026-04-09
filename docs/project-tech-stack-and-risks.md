@@ -39,7 +39,7 @@
   - 模型文件通过本地对象存储适配层落盘
 - 接口职责：
   - `/api/scene`：读取、保存、重置当前场景
-  - `/api/assets/*`：资产 CRUD、端口/绑定配置、模型上传、发布历史
+  - `/api/assets/*`：资产 CRUD、连接点/绑定配置、模型上传、发布历史
   - `/api/equipment/catalog`：设备目录
   - `/api/equipment/:assetId`：设备资产描述
   - `/api/equipment/:assetId/ports`：端口描述
@@ -48,7 +48,7 @@
 
 - 三维模型格式：`GLB`
 - 场景数据：`scene.json`
-- 资产主信息/端口/绑定/版本：SQLite-backed tables
+- 资产主信息/连接点/绑定/版本：SQLite-backed tables
 - 模型文件：本地对象存储适配层（后续可替换 OSS）
 - 前端运行态数据：通过 `mock-api` 的 runtime 接口拉取，overview/detail 使用固定轮询
 
@@ -99,8 +99,8 @@
 - 前端已补齐页面级 runtime 集成测试，覆盖 `/overview` 与 `/detail/:deviceId` 的 runtime 接线
 - 前端已补齐场景管理与预览页测试，覆盖 `/scenes` 列表/创建和 `/scenes/:sceneId/preview` 只读预览入口
 - 前端已补齐 sceneStore 撤销测试，并将总览入口改成 `/scenes/:sceneId/overview`
-- 前端已补齐 `/assets` 管理页测试，覆盖资产列表、创建、编辑、发布/下线/删除与模型上传面板
-- 后端已补齐资产管理 API 集成测试，覆盖草稿创建、配置保存、文件上传、发布投影和设备目录回读
+- 前端已补齐 `/assets` 管理页测试，覆盖资产列表、创建、编辑、连接点语义保存、发布/下线/删除与模型上传面板
+- 后端已补齐资产管理 API/仓储测试，覆盖草稿创建、连接点语义持久化、兼容投影、文件上传、发布投影和设备目录回读
 
 当前前端构建仍有明显体积压力：
 

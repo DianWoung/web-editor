@@ -32,6 +32,25 @@ export const assetPortSchema = z.object({
   sortOrder: z.number().int().nonnegative(),
 })
 
+export const assetConnectorSchema = z.object({
+  id: z.string().min(1),
+  connectorKey: z.string().min(1),
+  portKey: z.string().min(1),
+  name: z.string().min(1),
+  system: z.string().min(1),
+  role: z.string().min(1),
+  medium: z.string().min(1).nullable(),
+  direction: z.string().min(1),
+  side: z.string().min(1).nullable(),
+  groupKey: z.string().min(1).nullable(),
+  required: z.boolean(),
+  sortOrder: z.number().int().nonnegative(),
+  geometry: z.object({
+    anchor: z.tuple([z.number(), z.number(), z.number()]),
+    normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
+  }),
+})
+
 export const assetBindingSchema = z.object({
   id: z.string().min(1),
   bindingType: z.enum(['device_identity', 'point_mapping', 'runtime_field']),
@@ -42,6 +61,7 @@ export const assetBindingSchema = z.object({
 
 export const assetDetailSchema = z.object({
   asset: assetListItemSchema,
+  connectors: z.array(assetConnectorSchema),
   ports: z.array(assetPortSchema),
   bindings: z.array(assetBindingSchema),
 })
@@ -67,6 +87,12 @@ export const assetPortMutationSchema = z.object({
   position: z.tuple([z.number(), z.number(), z.number()]),
   system: z.string().trim().min(1).max(80),
   direction: z.string().trim().min(1).max(40),
+  role: z.string().trim().min(1).max(80).default('generic'),
+  medium: z.string().trim().min(1).max(80).nullable().optional(),
+  side: z.string().trim().min(1).max(40).nullable().optional(),
+  groupKey: z.string().trim().min(1).max(80).nullable().optional(),
+  required: z.boolean().optional().default(false),
+  normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
 })
 
 export const assetPortsPayloadSchema = z.object({
@@ -74,6 +100,7 @@ export const assetPortsPayloadSchema = z.object({
 })
 
 export const assetPortsResponseSchema = z.object({
+  connectors: z.array(assetConnectorSchema),
   ports: z.array(assetPortSchema),
 })
 
@@ -120,6 +147,7 @@ export const assetVersionsSchema = z.object({
 })
 
 export type AssetBinding = z.infer<typeof assetBindingSchema>
+export type AssetConnector = z.infer<typeof assetConnectorSchema>
 export type AssetDetail = z.infer<typeof assetDetailSchema>
 export type AssetListItem = z.infer<typeof assetListItemSchema>
 export type AssetMutationInput = z.infer<typeof assetMutationSchema>

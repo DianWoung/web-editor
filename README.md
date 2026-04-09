@@ -74,7 +74,8 @@ npm run check
 
 - `/assets` is the new asset management center
 - the frontend now creates, edits, publishes, archives, and deletes assets from that page
-- asset metadata, ports, bindings, versions, and upload records are stored by the backend in a SQLite-backed repository layer
+- asset metadata, connectors, bindings, versions, and upload records are stored by the backend in a SQLite-backed repository layer
+- the asset editor now uses a semantic connector model first, while the backend still projects published connectors back to the legacy `ports` contract for scene/equipment consumers
 - model files are uploaded through `POST /api/assets/uploads` and served back through a storage-adapter URL
 - the scene editor palette now treats `/assets` as the primary asset-entry workflow and only lists published assets
 - published assets still flow into the existing equipment-consumer contract:
