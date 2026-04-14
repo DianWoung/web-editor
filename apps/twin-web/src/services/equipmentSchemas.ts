@@ -17,6 +17,7 @@ export const assetJsonSchema = z.object({
   }),
   renderStyle: z.enum(['box', 'icosahedron', 'dodecahedron', 'octahedron']).optional(),
   modelGlb: z.boolean().optional(),
+  modelUrl: z.string().min(1).nullable().optional(),
 })
 
 export const portsFileSchema = z.object({

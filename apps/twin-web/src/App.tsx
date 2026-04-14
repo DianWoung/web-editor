@@ -22,6 +22,11 @@ const ScenesPage = lazy(async () => {
   return { default: mod.ScenesPage }
 })
 
+const AssetsPage = lazy(async () => {
+  const mod = await import('@/pages/assets/AssetsPage')
+  return { default: mod.AssetsPage }
+})
+
 const ScenePreviewPage = lazy(async () => {
   const mod = await import('@/pages/scenes/ScenePreviewPage')
   return { default: mod.ScenePreviewPage }
@@ -48,6 +53,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/scenes" replace />} />
           <Route path="/overview" element={<Navigate to="/scenes" replace />} />
           <Route path="/scenes" element={<ScenesPage />} />
+          <Route path="/assets" element={<AssetsPage />} />
           <Route path="/scenes/:sceneId/overview" element={<OverviewPage />} />
           <Route path="/scenes/:sceneId/preview" element={<ScenePreviewPage />} />
           <Route path="/detail/:deviceId" element={<DeviceDetailPage />} />

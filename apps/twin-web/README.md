@@ -7,6 +7,7 @@
 ## 路由（当前）
 
 - `/` → 重定向到 **`/scenes`**
+- **`/assets`**：资产管理中心（新建、编辑、连接点配置、绑定占位、模型上传、发布/下线/删除）
 - **`/scenes`**：命名场景管理（创建、列表预览、进入编辑）
 - **`/scenes/:sceneId/overview`**：命名场景运行态总览（KPI、流动状态、设备详情跳转）
 - **`/scenes/:sceneId/preview`**：命名场景只读预览（可操作视角、开启流动状态，不可编辑）
@@ -26,7 +27,7 @@
 ## 场景与资产版本
 
 - **`scene.json` 根字段 `version`**：场景文件格式版本（整数），用于后续迁移；与设备 `asset.json` 中的 **`assetVersion`** 独立。
-- **`assetVersion`**：单个设备模板（几何/端口）变更时递增；旧场景仍可加载，但若端口定义不兼容需人工重绑或脚本迁移。
+- **`assetVersion`**：单个设备模板（几何/连接点）变更时递增；旧场景仍可加载，但若连接定义不兼容需人工重绑或脚本迁移。
 
 ## 管线 MVP 档位
 
@@ -36,6 +37,14 @@
 
 运行时以 `mock-api` 为单一读取入口：
 
+- `GET /api/assets` / `POST /api/assets`：资产草稿列表与创建
+- `GET /api/assets/:assetId` / `PUT /api/assets/:assetId`：资产详情与基础配置更新
+- `PUT /api/assets/:assetId/ports`：连接点配置持久化；当前仍沿用 `ports` 路径名以兼容既有消费者
+- `PUT /api/assets/:assetId/bindings`：绑定占位持久化
+- `POST /api/assets/uploads`：模型文件上传
+- `POST /api/assets/:assetId/publish`：发布资产到设备库
+- `POST /api/assets/:assetId/archive` / `DELETE /api/assets/:assetId`：下线与删除
+- `GET /api/assets/:assetId/versions`：发布历史
 - `GET /api/equipment/catalog`：资产 ID 列表
 - `GET /api/equipment/{assetId}`：资产描述，最少字段：
   - `assetVersion`（正整数）
@@ -43,10 +52,13 @@
   - `displayName`、`type`、`defaultSystem`
   - `bounds.halfExtents`：`[hx, hy, hz]`（局部空间半长，用于占位 Box 与碰撞）
   - `modelGlb`（可选）：为 `true` 时前端通过后端返回的模型地址加载 GLB；失败则回退占位体，并在界面提示
-- `GET /api/equipment/{assetId}/ports`：`ports[].id|name|position|system|direction`，其中 **`position` 为设备局部坐标**
+  - `modelUrl`（可选）：已发布模型的真实可访问地址
+- `GET /api/equipment/{assetId}/ports`：兼容投影接口，继续返回 `ports[].id|name|position|system|direction`，其中 **`position` 为设备局部坐标**
 - `GET /api/scene` / `PUT /api/scene`：当前工作场景
 - `GET /api/scene/library` / `GET|PUT /api/scene/library/:sceneId`：命名场景列表与内容
 - `POST /api/scene/library/:sceneId/load`：把命名场景载入当前工作场景
+
+编排器设备库已从“浏览器本地导入资产包”切回“已发布资产只读消费”模式。新增设备资产请先到 `/assets` 完成上传、连接点配置和发布。
 
 ## 数据模型映射（与《场景编辑器方案》5.1）
 
@@ -76,7 +88,7 @@ npm run check
 - 后端默认根据 `current.scene.json` 中的设备清单动态生成 deterministic 运行态，用于联调与演示。
 - 若 `mock-api` 的数据根目录下存在 `runtime/snapshot.json`，后端优先使用其中的 `overview` 与 `devices[deviceId]` 作为覆盖数据。
 - `DeviceDetailPage` 里的运行模式、策略说明、AI 建议目前仍是前端默认文案，不属于本轮 runtime API 的后端职责。
-- `npm test -w twin-web` 当前会同时跑 Node 侧 API/store 测试和 Vitest 页面级测试，覆盖 runtime 接线、场景管理、预览页与编排页命名场景加载。
+- `npm test -w twin-web` 当前会同时跑 Node 侧 API/store 测试和 Vitest 页面级测试，覆盖 runtime 接线、场景管理、预览页、资产管理页与编排页命名场景加载。
 
 ## 性能基线（请在本机填写）
 

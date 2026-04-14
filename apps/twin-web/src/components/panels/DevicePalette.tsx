@@ -1,165 +1,25 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useSceneStore } from '@/store/sceneStore'
-import {
-  assetJsonSchema,
-  catalogSchema,
-  loadEquipmentAssetsByIds,
-  portsFileSchema,
-  type CatalogAsset,
-  type RenderStyle,
-} from '@/services/loadEquipmentCatalog'
-import { collectAssetPackFiles } from '@/services/assetPackImport'
+import { type CatalogAsset } from '@/services/loadEquipmentCatalog'
 
 type Props = {
   catalog: CatalogAsset[] | null
   loadError: string | null
   pendingPlacement: CatalogAsset | null
   onSetPendingPlacement: (asset: CatalogAsset | null) => void
-  onImportAssets: (assets: CatalogAsset[]) => void
 }
 
-export function DevicePalette({
-  catalog,
-  loadError,
-  pendingPlacement,
-  onSetPendingPlacement,
-  onImportAssets,
-}: Props) {
+export function DevicePalette({ catalog, loadError, pendingPlacement, onSetPendingPlacement }: Props) {
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
-
-  const [importError, setImportError] = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
-  const catalogInputRef = useRef<HTMLInputElement>(null)
-  const packInputRef = useRef<HTMLInputElement>(null)
-
-  const parseAssetPackFromFiles = async (files: File[]) => {
-    const byAssetId = collectAssetPackFiles(files)
-
-    const assets: CatalogAsset[] = []
-    for (const [assetFolder, pack] of Object.entries(byAssetId)) {
-      if (!pack.assetFile || !pack.portsFile) continue
-      const assetText = await pack.assetFile.text()
-      const portsText = await pack.portsFile.text()
-      let aJson: unknown
-      let pJson: unknown
-      try {
-        aJson = JSON.parse(assetText) as unknown
-        pJson = JSON.parse(portsText) as unknown
-      } catch {
-        throw new Error(`资产包解析失败：${assetFolder}（JSON 格式不合法）`)
-      }
-      const a = assetJsonSchema.parse(aJson)
-      const p = portsFileSchema.parse(pJson)
-      const renderStyle: RenderStyle = a.renderStyle ?? 'box'
-      const modelUrl = pack.glbFile ? URL.createObjectURL(pack.glbFile) : null
-      const modelGlb = !!modelUrl
-
-      // 优先使用 asset.json 内的 assetId（而不是文件夹名）
-      assets.push({
-        assetVersion: a.assetVersion,
-        assetId: a.assetId,
-        displayName: a.displayName,
-        type: a.type,
-        defaultSystem: a.defaultSystem,
-        halfExtents: a.bounds.halfExtents,
-        modelGlb,
-        modelGlbUrl: modelGlb ? modelUrl : null,
-        renderStyle,
-        portsTemplate: p.ports.map((x) => ({
-          id: x.id,
-          name: x.name,
-          position: x.position,
-          system: x.system,
-          direction: x.direction,
-        })),
-      })
-    }
-
-    if (assets.length === 0) {
-      throw new Error('未识别到有效资产包：请直接选择包含 asset.json / ports.json 的资产文件夹，或选择其上层打包目录。')
-    }
-
-    return assets
-  }
-
-  const importCatalogJson = async (text: string) => {
-    setImportError(null)
-    const parsed = catalogSchema.parse(JSON.parse(text) as unknown)
-    const assets = await loadEquipmentAssetsByIds(parsed.assets)
-    onImportAssets(assets)
-  }
-
-  const onPickCatalogJson = async (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    e.target.value = ''
-    if (!f) return
-    setImporting(true)
-    try {
-      const text = await f.text()
-      await importCatalogJson(text)
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setImporting(false)
-    }
-  }
-
-  const onPickAssetPack = async (e: ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files ? Array.from(e.target.files) : []
-    e.target.value = ''
-    if (list.length === 0) return
-    setImporting(true)
-    try {
-      const assets = await parseAssetPackFromFiles(list)
-      onImportAssets(assets)
-    } catch (err) {
-      setImportError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setImporting(false)
-    }
-  }
 
   return (
     <aside className="panel palette">
       <h2>设备库</h2>
       <div className="palette-import">
-        <div className="palette-import-row">
-          <button
-            type="button"
-            className="secondary small-btn"
-            onClick={() => catalogInputRef.current?.click()}
-            disabled={importing}
-          >
-            导入 catalog.json
-          </button>
-          <input
-            ref={catalogInputRef}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={onPickCatalogJson}
-          />
-          <button
-            type="button"
-            className="secondary small-btn"
-            onClick={() => packInputRef.current?.click()}
-            disabled={importing}
-          >
-            导入资产包（文件夹）
-          </button>
-          <input
-            ref={packInputRef}
-            type="file"
-            accept=".json,.glb,.gltf,application/json"
-            hidden
-            multiple
-            // @ts-expect-error webkitdirectory 仅在部分浏览器内生效
-            webkitdirectory="true"
-            onChange={onPickAssetPack}
-          />
-        </div>
-        {importing ? <p className="muted small">导入中…</p> : null}
-        {importError ? <p className="error small">{importError}</p> : null}
+        <p className="muted small">设备库只显示已发布资产。新增模型和端口配置请前往资产管理。</p>
+        <Link className="secondary scene-link-button" to="/assets">
+          打开资产管理
+        </Link>
       </div>
       {pendingPlacement ? (
         <div className="palette-placement-banner">

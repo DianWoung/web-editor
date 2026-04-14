@@ -1,11 +1,11 @@
 # web-editor
 
-Monorepo for a scene editor, named-scene management/preview workflow, and a mock runtime-data backend used for local development, demos, and closed-loop runtime verification.
+Monorepo for a scene editor, named-scene management/preview workflow, asset management center, and a mock runtime-data backend used for local development, demos, and closed-loop runtime verification.
 
 ## Workspace Layout
 
-- `apps/twin-web`: frontend app for overview, named scene management/preview, device detail, and scene editing
-- `apps/mock-api`: mock backend serving scene, equipment, and runtime endpoints
+- `apps/twin-web`: frontend app for scene management, asset management, overview, device detail, preview, and scene editing
+- `apps/mock-api`: mock backend serving scene, asset, equipment, and runtime endpoints
 - `assets`: model generation assets and related source material
 - `docs`: project notes, specs, plans, and technical risk records
 
@@ -69,6 +69,19 @@ npm run check
   - `/editor?sceneId=...` for editing
 - the editor keeps save in the top-right header and supports local undo for scene-structure changes
 - `mock-api` exposes the scene library endpoints used by that flow: `GET /api/scene/library`, `GET|PUT /api/scene/library/:sceneId`, and `POST /api/scene/library/:sceneId/load`
+
+## Asset Management Flow
+
+- `/assets` is the new asset management center
+- the frontend now creates, edits, publishes, archives, and deletes assets from that page
+- asset metadata, connectors, bindings, versions, and upload records are stored by the backend in a SQLite-backed repository layer
+- the asset editor now uses a semantic connector model first, while the backend still projects published connectors back to the legacy `ports` contract for scene/equipment consumers
+- model files are uploaded through `POST /api/assets/uploads` and served back through a storage-adapter URL
+- the scene editor palette now treats `/assets` as the primary asset-entry workflow and only lists published assets
+- published assets still flow into the existing equipment-consumer contract:
+  - `GET /api/equipment/catalog`
+  - `GET /api/equipment/:assetId`
+  - `GET /api/equipment/:assetId/ports`
 
 ## Where To Read More
 

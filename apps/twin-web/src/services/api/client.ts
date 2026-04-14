@@ -14,10 +14,11 @@ async function parseApiError(response: Response): Promise<string> {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
-      ...(init?.body ? { 'content-type': 'application/json' } : undefined),
+      ...(init?.body && !isFormData ? { 'content-type': 'application/json' } : undefined),
       ...(init?.headers ?? {}),
     },
   })

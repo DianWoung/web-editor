@@ -21,7 +21,6 @@ export function EditorPage() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof loadEquipmentCatalog>> | null>(null)
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
-  const [importedCatalog, setImportedCatalog] = useState<CatalogAsset[]>([])
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
@@ -66,13 +65,7 @@ export function EditorPage() {
     applyStressTest(Math.floor(n))
   }, [applyStressTest])
 
-  const mergedCatalog = useMemo(() => {
-    const base = catalog ?? []
-    const all = [...base, ...importedCatalog]
-    const map = new Map<string, CatalogAsset>()
-    for (const a of all) map.set(a.assetId, a)
-    return Array.from(map.values())
-  }, [catalog, importedCatalog])
+  const mergedCatalog = useMemo(() => catalog ?? [], [catalog])
 
   const modelGlbByAssetId = useMemo(() => {
     const m: Record<string, string | null | undefined> = {}
@@ -89,15 +82,6 @@ export function EditorPage() {
     })
     return m
   }, [mergedCatalog])
-
-  const onImportAssets = useCallback((assets: CatalogAsset[]) => {
-    setImportedCatalog((prev) => {
-      const map = new Map<string, CatalogAsset>()
-      for (const a of prev) map.set(a.assetId, a)
-      for (const a of assets) map.set(a.assetId, a)
-      return Array.from(map.values())
-    })
-  }, [])
 
   const onFloorPlace = useCallback(
     (point: [number, number, number]) => {
@@ -178,7 +162,6 @@ export function EditorPage() {
           loadError={catalogError}
           pendingPlacement={pendingPlacement}
           onSetPendingPlacement={setPendingPlacement}
-          onImportAssets={onImportAssets}
         />
         <div className="editor-center">
           <main className="editor-canvas-wrap">
