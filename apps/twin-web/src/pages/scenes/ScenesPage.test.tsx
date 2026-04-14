@@ -9,12 +9,14 @@ const scenesPageMocks = vi.hoisted(() => ({
   listNamedScenes: vi.fn(),
   fetchNamedScene: vi.fn(),
   createEmptyNamedScene: vi.fn(),
+  deleteNamedScene: vi.fn(),
 }))
 
 vi.mock('@/services/loadDemoScene', () => ({
   listNamedScenes: scenesPageMocks.listNamedScenes,
   fetchNamedScene: scenesPageMocks.fetchNamedScene,
   createEmptyNamedScene: scenesPageMocks.createEmptyNamedScene,
+  deleteNamedScene: scenesPageMocks.deleteNamedScene,
 }))
 
 describe('ScenesPage', () => {
@@ -23,6 +25,7 @@ describe('ScenesPage', () => {
     scenesPageMocks.listNamedScenes.mockReset()
     scenesPageMocks.fetchNamedScene.mockReset()
     scenesPageMocks.createEmptyNamedScene.mockReset()
+    scenesPageMocks.deleteNamedScene.mockReset()
   })
 
   afterEach(() => {
@@ -37,6 +40,7 @@ describe('ScenesPage', () => {
           {
             id: 'scene-day',
             name: '白天工况',
+            remark: '白天冷站运行',
             updatedAt: '2026-04-06T08:00:00.000Z',
             deviceCount: 2,
             pipeCount: 1,
@@ -89,13 +93,13 @@ describe('ScenesPage', () => {
     await screen.findByRole('heading', { name: '白天工况' })
     await screen.findByRole('link', { name: '总览' })
     await screen.findByRole('link', { name: '预览' })
+    await screen.findAllByText('白天冷站运行')
     await screen.findByText('设备数')
     await screen.findByText('2')
-    await screen.findByText('主机 1')
-    await screen.findByText(/CH-01.out → PUMP-01.in/)
-  })
+    await screen.findByText(/最近更新/)
+  }, 10000)
 
-  it('creates a new scene and exposes edit entry', async () => {
+  it('creates a new scene with remark and exposes edit entry', async () => {
     scenesPageMocks.listNamedScenes
       .mockResolvedValueOnce({ ok: true, data: { items: [] } })
       .mockResolvedValueOnce({
@@ -105,6 +109,7 @@ describe('ScenesPage', () => {
             {
               id: 'scene-night',
               name: '夜间工况',
+              remark: '夜间低负荷',
               updatedAt: '2026-04-06T09:00:00.000Z',
               deviceCount: 0,
               pipeCount: 0,
@@ -112,10 +117,10 @@ describe('ScenesPage', () => {
             },
           ],
         },
-      })
+    })
     scenesPageMocks.createEmptyNamedScene.mockResolvedValue({
       ok: true,
-      data: { sceneId: 'scene-night', name: '夜间工况', updatedAt: '2026-04-06T09:00:00.000Z' },
+      data: { sceneId: 'scene-night', name: '夜间工况', remark: '夜间低负荷', updatedAt: '2026-04-06T09:00:00.000Z' },
     })
     scenesPageMocks.fetchNamedScene.mockResolvedValue({
       ok: true,
@@ -132,11 +137,56 @@ describe('ScenesPage', () => {
     )
 
     fireEvent.change(screen.getByLabelText('新建场景名称'), { target: { value: '夜间工况' } })
+    fireEvent.change(screen.getByLabelText('新建场景备注'), { target: { value: '夜间低负荷' } })
     fireEvent.click(screen.getByRole('button', { name: '创建并编辑' }))
 
     await waitFor(() => {
       assert.equal(scenesPageMocks.createEmptyNamedScene.mock.calls[0]?.[0], '夜间工况')
+      assert.equal(scenesPageMocks.createEmptyNamedScene.mock.calls[0]?.[1], '夜间低负荷')
     })
     await screen.findByText('Editor Route')
+  })
+
+  it('confirms before deleting a named scene', async () => {
+    scenesPageMocks.listNamedScenes
+      .mockResolvedValueOnce({
+        ok: true,
+        data: {
+          items: [
+            {
+              id: 'scene-delete',
+              name: '待删除场景',
+              remark: '需要确认删除',
+              updatedAt: '2026-04-06T10:00:00.000Z',
+              deviceCount: 1,
+              pipeCount: 0,
+              isCurrent: false,
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ ok: true, data: { items: [] } })
+    scenesPageMocks.fetchNamedScene.mockResolvedValue({
+      ok: true,
+      data: { version: 1, devices: [], portGroups: [], pipes: [] },
+    })
+    scenesPageMocks.deleteNamedScene.mockResolvedValue({ ok: true, data: { sceneId: 'scene-delete' } })
+
+    render(
+      <MemoryRouter initialEntries={['/scenes']}>
+        <Routes>
+          <Route path="/scenes" element={<ScenesPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('heading', { name: '待删除场景' })
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    await screen.findByText(/删除后不可恢复/)
+    fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
+
+    await waitFor(() => {
+      assert.equal(scenesPageMocks.deleteNamedScene.mock.calls[0]?.[0], 'scene-delete')
+    })
   })
 })

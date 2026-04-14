@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { rm } from 'node:fs/promises'
 import { Router } from 'express'
 
 import { fileExists, readJsonFile, writeJsonFile } from '../lib/fileStore.ts'
@@ -102,7 +103,7 @@ export function createSceneRouter(dataRoot: string) {
     }
 
     try {
-      const { name, scene } = parsed.data
+      const { name, remark, scene } = parsed.data
       const library = await readSceneLibraryIndex()
       const existing = library.items.find((item) => item.name === name)
       const sceneId = existing?.id ?? `${slugifySceneName(name)}-${Date.now().toString(36)}`
@@ -110,6 +111,7 @@ export function createSceneRouter(dataRoot: string) {
       const nextItem: SceneLibraryItem = {
         id: sceneId,
         name,
+        remark,
         updatedAt,
         deviceCount: scene.devices.length,
         pipeCount: scene.pipes.length,
@@ -122,14 +124,14 @@ export function createSceneRouter(dataRoot: string) {
         writeJsonFile(sceneLibraryIndexPath, { items: nextItems }),
       ])
 
-      res.json({ ok: true, sceneId, name, updatedAt })
+      res.json({ ok: true, sceneId, name, remark, updatedAt })
     } catch (error) {
       next(error)
     }
   })
 
   router.put('/library/:sceneId', async (req, res, next) => {
-    const parsed = sceneFileSchema.safeParse(req.body)
+    const parsed = saveNamedSceneRequestSchema.safeParse(req.body)
     if (!parsed.success) {
       next(new HttpError(400, `场景校验失败：${parsed.error.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`).join('; ')}`))
       return
@@ -143,25 +145,27 @@ export function createSceneRouter(dataRoot: string) {
         throw new HttpError(404, `命名场景不存在：${sceneId}`)
       }
 
+      const { name, remark, scene } = parsed.data
       const updatedAt = new Date().toISOString()
       const nextItem: SceneLibraryItem = {
         id: sceneId,
-        name: existing.name,
+        name,
+        remark,
         updatedAt,
-        deviceCount: parsed.data.devices.length,
-        pipeCount: parsed.data.pipes.length,
+        deviceCount: scene.devices.length,
+        pipeCount: scene.pipes.length,
       }
       const nextItems = library.items.filter((item) => item.id !== sceneId)
       nextItems.push(nextItem)
 
       await Promise.all([
-        writeJsonFile(path.join(sceneLibraryDir, `${sceneId}.scene.json`), parsed.data),
+        writeJsonFile(path.join(sceneLibraryDir, `${sceneId}.scene.json`), scene),
         writeJsonFile(sceneLibraryIndexPath, { items: nextItems }),
-        writeJsonFile(currentScenePath, parsed.data),
+        writeJsonFile(currentScenePath, scene),
         writeCurrentSceneMeta({ sceneId }),
       ])
 
-      res.json({ ok: true, sceneId, name: existing.name, updatedAt })
+      res.json({ ok: true, sceneId, name, remark, updatedAt })
     } catch (error) {
       next(error)
     }
@@ -185,6 +189,28 @@ export function createSceneRouter(dataRoot: string) {
       const scene = await readNamedScene(sceneId)
       await Promise.all([writeJsonFile(currentScenePath, scene), writeCurrentSceneMeta({ sceneId })])
       res.json(scene)
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.delete('/library/:sceneId', async (req, res, next) => {
+    try {
+      const { sceneId } = req.params
+      const library = await readSceneLibraryIndex()
+      if (!library.items.some((item) => item.id === sceneId)) {
+        throw new HttpError(404, `命名场景不存在：${sceneId}`)
+      }
+      const currentMeta = await readCurrentSceneMeta()
+      const nextItems = library.items.filter((item) => item.id !== sceneId)
+
+      await Promise.all([
+        rm(path.join(sceneLibraryDir, `${sceneId}.scene.json`), { force: true }),
+        writeJsonFile(sceneLibraryIndexPath, { items: nextItems }),
+        currentMeta.sceneId === sceneId ? writeCurrentSceneMeta({ sceneId: null }) : Promise.resolve(),
+      ])
+
+      res.json({ ok: true, sceneId })
     } catch (error) {
       next(error)
     }

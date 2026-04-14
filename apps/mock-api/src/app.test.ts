@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { EventEmitter } from 'node:events'
@@ -208,6 +208,7 @@ test('GET /api/scene/library returns saved named scenes', async () => {
 
   const createRes = await performRequest(app, 'POST', '/api/scene/library', {
     name: '冷站白天工况',
+    remark: '白天满载运行场景',
     scene: {
       version: 1,
       devices: [
@@ -231,6 +232,7 @@ test('GET /api/scene/library returns saved named scenes', async () => {
   const created = createRes._getJSONData()
   assert.equal(created.ok, true)
   assert.equal(created.name, '冷站白天工况')
+  assert.equal(created.remark, '白天满载运行场景')
   assert.match(created.sceneId, /^scene(-|[a-z0-9])+/)
   assert.match(created.updatedAt, /^\d{4}-\d{2}-\d{2}T/)
 
@@ -240,6 +242,7 @@ test('GET /api/scene/library returns saved named scenes', async () => {
   assert.deepEqual(listRes._getJSONData().items[0], {
     id: created.sceneId,
     name: '冷站白天工况',
+    remark: '白天满载运行场景',
     updatedAt: created.updatedAt,
     deviceCount: 1,
     pipeCount: 0,
@@ -253,6 +256,7 @@ test('POST /api/scene/library/:sceneId/load loads a named scene into current sce
 
   const createRes = await performRequest(app, 'POST', '/api/scene/library', {
     name: '冷站夜间工况',
+    remark: '夜间低负荷场景',
     scene: {
       version: 1,
       devices: [
@@ -294,6 +298,7 @@ test('PUT /api/scene/library/:sceneId updates a named scene and current scene sn
 
   const createRes = await performRequest(app, 'POST', '/api/scene/library', {
     name: '冷站周末工况',
+    remark: '周末测试场景',
     scene: {
       version: 1,
       devices: [],
@@ -304,26 +309,32 @@ test('PUT /api/scene/library/:sceneId updates a named scene and current scene sn
   const sceneId = createRes._getJSONData().sceneId as string
 
   const updateRes = await performRequest(app, 'PUT', `/api/scene/library/${sceneId}`, {
-    version: 1,
-    devices: [
-      {
-        id: 'CHW-PUMP-77',
-        type: 'pump',
-        name: 'CHW Pump 77',
-        assetId: 'chw_pump_v1',
-        position: [7, 0.35, 0],
-        rotation: [0, 0, 0],
-        system: 'CHW',
-        tags: [],
-        boundsHalfExtents: [0.35, 0.35, 0.35],
-      },
-    ],
-    portGroups: [{ deviceId: 'CHW-PUMP-77', ports: [] }],
-    pipes: [],
+    name: '冷站周末新工况',
+    remark: '周末保养模式',
+    scene: {
+      version: 1,
+      devices: [
+        {
+          id: 'CHW-PUMP-77',
+          type: 'pump',
+          name: 'CHW Pump 77',
+          assetId: 'chw_pump_v1',
+          position: [7, 0.35, 0],
+          rotation: [0, 0, 0],
+          system: 'CHW',
+          tags: [],
+          boundsHalfExtents: [0.35, 0.35, 0.35],
+        },
+      ],
+      portGroups: [{ deviceId: 'CHW-PUMP-77', ports: [] }],
+      pipes: [],
+    },
   })
 
   assert.equal(updateRes.statusCode, 200)
   assert.equal(updateRes._getJSONData().sceneId, sceneId)
+  assert.equal(updateRes._getJSONData().name, '冷站周末新工况')
+  assert.equal(updateRes._getJSONData().remark, '周末保养模式')
 
   const namedRes = await performRequest(app, 'GET', `/api/scene/library/${sceneId}`)
   assert.equal(namedRes.statusCode, 200)
@@ -336,6 +347,42 @@ test('PUT /api/scene/library/:sceneId updates a named scene and current scene sn
   const listRes = await performRequest(app, 'GET', '/api/scene/library')
   assert.equal(listRes.statusCode, 200)
   assert.equal(listRes._getJSONData().items[0]?.deviceCount, 1)
+  assert.equal(listRes._getJSONData().items[0]?.name, '冷站周末新工况')
+  assert.equal(listRes._getJSONData().items[0]?.remark, '周末保养模式')
+})
+
+test('DELETE /api/scene/library/:sceneId removes the scene file and clears current meta when needed', async () => {
+  const dataRoot = await setupFixture()
+  const app = createApp({ dataRoot })
+
+  const createRes = await performRequest(app, 'POST', '/api/scene/library', {
+    name: '待删除场景',
+    remark: '准备删除',
+    scene: {
+      version: 1,
+      devices: [],
+      portGroups: [],
+      pipes: [],
+    },
+  })
+  const sceneId = createRes._getJSONData().sceneId as string
+
+  const loadRes = await performRequest(app, 'POST', `/api/scene/library/${sceneId}/load`)
+  assert.equal(loadRes.statusCode, 200)
+
+  const deleteRes = await performRequest(app, 'DELETE', `/api/scene/library/${sceneId}`)
+  assert.equal(deleteRes.statusCode, 200)
+  assert.deepEqual(deleteRes._getJSONData(), { ok: true, sceneId })
+
+  const listRes = await performRequest(app, 'GET', '/api/scene/library')
+  assert.equal(listRes.statusCode, 200)
+  assert.equal(listRes._getJSONData().items.some((item: { id: string }) => item.id === sceneId), false)
+
+  const metaText = await readFile(path.join(dataRoot, 'scene', 'current.scene.meta.json'), 'utf8')
+  assert.deepEqual(JSON.parse(metaText), { sceneId: null })
+
+  const deletedSceneRes = await performRequest(app, 'GET', `/api/scene/library/${sceneId}`)
+  assert.equal(deletedSceneRes.statusCode, 500)
 })
 
 test('GET /api/equipment/catalog returns equipment ids', async () => {

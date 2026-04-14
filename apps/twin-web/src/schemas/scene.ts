@@ -14,6 +14,7 @@ export const sceneFileSchema = z.object({
 export const sceneLibraryItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  remark: z.string(),
   updatedAt: z.string().min(1),
   deviceCount: z.number().int().nonnegative(),
   pipeCount: z.number().int().nonnegative(),

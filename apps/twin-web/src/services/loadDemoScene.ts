@@ -1,4 +1,5 @@
 import {
+  deleteNamedScene as deleteNamedSceneApi,
   getCurrentScene,
   getNamedScene,
   getNamedScenes,
@@ -59,7 +60,7 @@ export async function createNamedSceneFromStore(name: string): Promise<ServiceRe
   try {
     const text = useSceneStore.getState().exportSceneJson()
     const scene = JSON.parse(text) as SceneFile
-    const result = await saveNamedScene(name, scene)
+    const result = await saveNamedScene(name, '', scene)
     return { ok: true, data: result }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
@@ -83,21 +84,33 @@ export async function fetchNamedScene(sceneId: string): Promise<ServiceResult<Sc
   }
 }
 
-export async function createEmptyNamedScene(name: string): Promise<ServiceResult<{ sceneId: string; name: string; updatedAt: string }>> {
+export async function createEmptyNamedScene(name: string, remark: string): Promise<ServiceResult<{ sceneId: string; name: string; remark: string; updatedAt: string }>> {
   try {
-    const result = await saveNamedScene(name, { version: 1, devices: [], portGroups: [], pipes: [] })
+    const result = await saveNamedScene(name, remark, { version: 1, devices: [], portGroups: [], pipes: [] })
     return { ok: true, data: result }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
-export async function saveNamedSceneFromStore(sceneId: string): Promise<ServiceResult<{ updatedAt: string }>> {
+export async function saveNamedSceneFromStore(
+  sceneId: string,
+  name: string,
+  remark: string,
+): Promise<ServiceResult<{ updatedAt: string; name: string; remark: string }>> {
   try {
     const text = useSceneStore.getState().exportSceneJson()
     const scene = JSON.parse(text) as SceneFile
-    const result = await updateNamedScene(sceneId, scene)
-    return { ok: true, data: { updatedAt: result.updatedAt } }
+    const result = await updateNamedScene(sceneId, { name, remark, scene })
+    return { ok: true, data: { updatedAt: result.updatedAt, name: result.name, remark: result.remark } }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+export async function deleteNamedScene(sceneId: string): Promise<ServiceResult<{ sceneId: string }>> {
+  try {
+    return { ok: true, data: await deleteNamedSceneApi(sceneId) }
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }

@@ -4,7 +4,7 @@
 
 本仓库是一个基于 Web 的机房数字孪生场景编辑与展示项目，采用 `npm workspaces` 管理两个应用：
 
-- `apps/twin-web`：前端主应用，负责场景编排、三维总览、设备详情展示
+- `apps/twin-web`：前端主应用，负责场景工作台、场景编排、三维总览与设备详情展示
 - `apps/mock-api`：本地 Mock API，负责设备目录、命名场景、当前场景与 runtime 数据的读取和保存
 
 当前落地状态更接近“场景主链路和 runtime 闭环已稳定，资产中心基础版已经接入，下一步进入性能收敛与更真实交付边界补齐”的形态。
@@ -83,22 +83,22 @@
 
 ## 4. 当前已验证状态
 
-2026-04-08 fresh verification:
+2026-04-13 fresh verification:
 
-- `npm test -w twin-web`：通过，`16` 个测试全部通过
-- `npm test -w mock-api`：通过，`19` 个测试全部通过
+- `npm test -w twin-web`：通过
+- `npm test -w mock-api`：通过
 - `npm run lint -w twin-web`：通过
-- `npm run build`：通过
-- `npm run build:api`：通过
-- `npm run check`：未重新跑整仓，但组成命令已分别通过
+- `npm run build -w twin-web`：通过
+- `npm run build -w mock-api`：通过
+- `npm run check`：本轮未重新跑整仓，但组成命令已分别通过
 
 当前质量门禁状态：
 
 - 仓库根级已提供 `lint`、`test`、`check` 聚合脚本
 - 已新增 GitHub Actions CI，执行与本地一致的 `npm run check`
 - 前端已补齐页面级 runtime 集成测试，覆盖 `/overview` 与 `/detail/:deviceId` 的 runtime 接线
-- 前端已补齐场景管理与预览页测试，覆盖 `/scenes` 列表/创建和 `/scenes/:sceneId/preview` 只读预览入口
-- 前端已补齐 sceneStore 撤销测试，并将总览入口改成 `/scenes/:sceneId/overview`
+- 前端已补齐场景工作台与预览页测试，覆盖 `/scenes` 创建/删除/摘要和 `/scenes/:sceneId/preview` 只读预览入口
+- 前端已补齐 sceneStore 撤销测试，并将总览入口稳定为 `/scenes/:sceneId/overview`
 - 前端已补齐 `/assets` 管理页测试，覆盖资产列表、创建、编辑、连接点语义保存、发布/下线/删除与模型上传面板
 - 后端已补齐资产管理 API/仓储测试，覆盖草稿创建、连接点语义持久化、兼容投影、文件上传、发布投影和设备目录回读
 
@@ -133,13 +133,13 @@
   - 明确标注旧目录仅用于 demo seed
   - 下一步补独立 bootstrap/import 脚本，把历史 JSON 完全退出运行链路
 
-#### 3. 场景优先入口已经成形，还缺更完整的端到端视角
+#### 3. 场景工作台已经成形，还缺更完整的端到端视角
 
-- 现状：已有 API/store、场景管理页与预览页测试，但还没有浏览器级 E2E
+- 现状：已有 API/store、场景工作台与预览页测试，但还没有浏览器级 E2E
 - 影响：路由、真实 canvas、浏览器交互链路仍可能存在未覆盖回归
 - 建议：
   - 下一步补最小浏览器级 smoke 测试
-  - 优先覆盖“场景管理进入总览/编辑”和“编排页保存/撤销”两条主链路
+  - 优先覆盖“场景工作台进入总览/编辑”和“编排页保存/撤销”两条主链路
 
 ### P1 中优先级风险
 
@@ -173,7 +173,7 @@
 
 #### 7. 编辑器能力仍偏 MVP，常用生产能力还在补齐
 
-- 现状：当前已新增撤销，但仍无重做、无多人协作
+- 现状：当前已新增撤销，场景级表单已收敛，但仍无重做、无多人协作
 - 影响：内部试用可以，但实际编排效率有限
 - 建议：下一步补重做，再考虑吸附、复制编排、批量操作
 

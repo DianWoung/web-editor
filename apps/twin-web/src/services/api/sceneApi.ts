@@ -16,6 +16,7 @@ type SaveNamedSceneResponse = {
   ok: true
   sceneId: string
   name: string
+  remark: string
   updatedAt: string
 }
 
@@ -58,17 +59,20 @@ export async function getNamedScenes(): Promise<SceneLibraryResponse> {
   return parseSceneLibraryApiResponse(await apiRequest<unknown>('/scene/library'))
 }
 
-export async function saveNamedScene(name: string, scene: SceneFile): Promise<SaveNamedSceneResponse> {
+export async function saveNamedScene(name: string, remark: string, scene: SceneFile): Promise<SaveNamedSceneResponse> {
   return apiRequest<SaveNamedSceneResponse>('/scene/library', {
     method: 'POST',
-    body: JSON.stringify({ name, scene }),
+    body: JSON.stringify({ name, remark, scene }),
   })
 }
 
-export async function updateNamedScene(sceneId: string, scene: SceneFile): Promise<SaveNamedSceneResponse> {
+export async function updateNamedScene(
+  sceneId: string,
+  payload: { name: string; remark: string; scene: SceneFile },
+): Promise<SaveNamedSceneResponse> {
   return apiRequest<SaveNamedSceneResponse>(`/scene/library/${encodeURIComponent(sceneId)}`, {
     method: 'PUT',
-    body: JSON.stringify(scene),
+    body: JSON.stringify(payload),
   })
 }
 
@@ -82,4 +86,10 @@ export async function loadNamedScene(sceneId: string): Promise<SceneFile> {
       method: 'POST',
     }),
   )
+}
+
+export async function deleteNamedScene(sceneId: string): Promise<{ ok: true; sceneId: string }> {
+  return apiRequest<{ ok: true; sceneId: string }>(`/scene/library/${encodeURIComponent(sceneId)}`, {
+    method: 'DELETE',
+  })
 }

@@ -11,6 +11,7 @@ const editorPageMocks = vi.hoisted(() => ({
   loadNamedSceneIntoStore: vi.fn(),
   saveCurrentSceneFromStore: vi.fn(),
   saveNamedSceneFromStore: vi.fn(),
+  listNamedScenes: vi.fn(),
 }))
 
 vi.mock('@/services/loadEquipmentCatalog', () => ({
@@ -22,6 +23,7 @@ vi.mock('@/services/loadDemoScene', () => ({
   loadNamedSceneIntoStore: editorPageMocks.loadNamedSceneIntoStore,
   saveCurrentSceneFromStore: editorPageMocks.saveCurrentSceneFromStore,
   saveNamedSceneFromStore: editorPageMocks.saveNamedSceneFromStore,
+  listNamedScenes: editorPageMocks.listNamedScenes,
 }))
 
 vi.mock('@/components/scene/EditorCanvas', () => ({
@@ -56,18 +58,38 @@ describe('EditorPage', () => {
     editorPageMocks.loadNamedSceneIntoStore.mockReset()
     editorPageMocks.saveCurrentSceneFromStore.mockReset()
     editorPageMocks.saveNamedSceneFromStore.mockReset()
+    editorPageMocks.listNamedScenes.mockReset()
     editorPageMocks.loadEquipmentCatalog.mockResolvedValue([])
     editorPageMocks.loadCurrentSceneIntoStore.mockResolvedValue({ ok: true, data: undefined })
     editorPageMocks.loadNamedSceneIntoStore.mockResolvedValue({ ok: true, data: {} })
     editorPageMocks.saveCurrentSceneFromStore.mockResolvedValue({ ok: true, data: { updatedAt: '2026-04-07T00:00:00.000Z' } })
-    editorPageMocks.saveNamedSceneFromStore.mockResolvedValue({ ok: true, data: { updatedAt: '2026-04-07T00:00:00.000Z' } })
+    editorPageMocks.saveNamedSceneFromStore.mockResolvedValue({
+      ok: true,
+      data: { updatedAt: '2026-04-07T00:00:00.000Z', name: '白天工况', remark: '默认备注' },
+    })
+    editorPageMocks.listNamedScenes.mockResolvedValue({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: 'scene-day',
+            name: '白天工况',
+            remark: '默认备注',
+            updatedAt: '2026-04-07T00:00:00.000Z',
+            deviceCount: 1,
+            pipeCount: 0,
+            isCurrent: false,
+          },
+        ],
+      },
+    })
   })
 
   afterEach(() => {
     cleanup()
   })
 
-  it('loads a named scene when sceneId query is provided', async () => {
+  it('loads named scene metadata into a simplified editor header', async () => {
     render(
       <MemoryRouter initialEntries={['/editor?sceneId=scene-day']}>
         <Routes>
@@ -80,8 +102,11 @@ describe('EditorPage', () => {
       assert.equal(editorPageMocks.loadNamedSceneIntoStore.mock.calls[0]?.[0], 'scene-day')
     })
     assert.equal(editorPageMocks.loadCurrentSceneIntoStore.mock.calls.length, 0)
+    await screen.findByDisplayValue('白天工况')
+    await screen.findByDisplayValue('默认备注')
     await screen.findByRole('button', { name: '保存' })
     await screen.findByRole('button', { name: '撤销' })
     await screen.findByRole('link', { name: '返回场景管理' })
+    assert.equal(screen.queryByText('SceneJsonToolbar'), null)
   })
 })
