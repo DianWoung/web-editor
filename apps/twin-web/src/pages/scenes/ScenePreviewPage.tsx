@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { ScenePreviewCanvas } from '@/components/scene/ScenePreviewCanvas'
-import type { SceneFile } from '@/schemas/scene'
+import type { SceneFile, SceneLibraryItem } from '@/schemas/scene'
 import { loadEquipmentCatalog, type CatalogAsset } from '@/services/loadEquipmentCatalog'
-import { fetchNamedScene } from '@/services/loadDemoScene'
+import { fetchNamedScene, listNamedScenes } from '@/services/loadDemoScene'
 
 function emptyScene(): SceneFile {
   return { version: 1, devices: [], portGroups: [], pipes: [] }
@@ -13,6 +13,7 @@ function emptyScene(): SceneFile {
 export function ScenePreviewPage() {
   const { sceneId } = useParams<{ sceneId: string }>()
   const [scene, setScene] = useState<SceneFile>(emptyScene)
+  const [sceneMeta, setSceneMeta] = useState<SceneLibraryItem | null>(null)
   const [catalog, setCatalog] = useState<CatalogAsset[]>([])
   const [flowEnabled, setFlowEnabled] = useState(false)
   const [loading, setLoading] = useState(Boolean(sceneId))
@@ -23,30 +24,33 @@ export function ScenePreviewPage() {
     if (!sceneId) return
     let cancelled = false
 
-    const timer = window.setTimeout(() => {
-      void Promise.all([fetchNamedScene(sceneId), loadEquipmentCatalog()])
-        .then(([sceneResult, catalogResult]) => {
-          if (cancelled) return
-          if (!sceneResult.ok) {
-            setError(sceneResult.error)
-            setLoading(false)
-            return
-          }
-          setScene(sceneResult.data)
-          setCatalog(catalogResult)
-          setError(null)
+    void Promise.all([fetchNamedScene(sceneId), loadEquipmentCatalog(), listNamedScenes()])
+      .then(([sceneResult, catalogResult, listResult]) => {
+        if (cancelled) return
+        if (!sceneResult.ok) {
+          setError(sceneResult.error)
           setLoading(false)
-        })
-        .catch((loadError) => {
-          if (cancelled) return
-          setError(loadError instanceof Error ? loadError.message : String(loadError))
+          return
+        }
+        if (!listResult.ok) {
+          setError(listResult.error)
           setLoading(false)
-        })
-    }, 0)
+          return
+        }
+        setScene(sceneResult.data)
+        setSceneMeta(listResult.data.items.find((item) => item.id === sceneId) ?? null)
+        setCatalog(catalogResult)
+        setError(null)
+        setLoading(false)
+      })
+      .catch((loadError) => {
+        if (cancelled) return
+        setError(loadError instanceof Error ? loadError.message : String(loadError))
+        setLoading(false)
+      })
 
     return () => {
       cancelled = true
-      window.clearTimeout(timer)
     }
   }, [sceneId])
 
@@ -64,9 +68,9 @@ export function ScenePreviewPage() {
       <header className="scene-preview-topbar">
         <div>
           <p className="scene-preview-eyebrow">只读预览</p>
-          <h1>场景效果预览</h1>
+          <h1>{sceneMeta?.name ?? '场景效果预览'}</h1>
           <p className="muted small">
-            当前场景：<code>{sceneId ?? 'unknown-scene'}</code>
+            {sceneMeta ? `最近更新：${new Date(sceneMeta.updatedAt).toLocaleString()}` : <>当前场景：<code>{sceneId ?? 'unknown-scene'}</code></>}
           </p>
         </div>
         <div className="scenes-actions">
@@ -97,29 +101,17 @@ export function ScenePreviewPage() {
 
           <section className="scenes-card">
             <h2>场景概览</h2>
+            <p className="scenes-summary-remark">{sceneMeta?.remark || '暂无备注'}</p>
             <div className="scenes-preview-grid">
               <article className="scenes-preview-stat">
                 <span className="toolbar-hint">设备数</span>
-                <strong>{scene.devices.length}</strong>
+                <strong>{sceneMeta?.deviceCount ?? scene.devices.length}</strong>
               </article>
               <article className="scenes-preview-stat">
                 <span className="toolbar-hint">管线数</span>
-                <strong>{scene.pipes.length}</strong>
-              </article>
-              <article className="scenes-preview-stat">
-                <span className="toolbar-hint">端口组</span>
-                <strong>{scene.portGroups.length}</strong>
+                <strong>{sceneMeta?.pipeCount ?? scene.pipes.length}</strong>
               </article>
             </div>
-          </section>
-
-          <section className="scenes-card">
-            <h2>视角提示</h2>
-            <ul className="scene-preview-hints">
-              <li>拖动左键旋转视角。</li>
-              <li>滚轮缩放查看设备组合细节。</li>
-              <li>右键或双指拖动平移画面。</li>
-            </ul>
           </section>
 
           {pageError ? (

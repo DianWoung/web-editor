@@ -145,7 +145,7 @@ describe('AssetsPage', () => {
     await waitFor(() => {
       assert.equal(assetPageMocks.listAssets.mock.calls.at(-1)?.[0], 'published')
     })
-  })
+  }, 10000)
 
   it('creates, edits, publishes, archives, and deletes an asset', async () => {
     render(

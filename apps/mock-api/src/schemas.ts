@@ -44,6 +44,7 @@ export const sceneFileSchema = z.object({
 export const sceneLibraryItemSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  remark: z.string().default(''),
   updatedAt: z.string().min(1),
   deviceCount: z.number().int().nonnegative(),
   pipeCount: z.number().int().nonnegative(),
@@ -59,6 +60,7 @@ export const currentSceneMetaSchema = z.object({
 
 export const saveNamedSceneRequestSchema = z.object({
   name: z.string().trim().min(1).max(80),
+  remark: z.string().trim().max(240).default(''),
   scene: sceneFileSchema,
 })
 

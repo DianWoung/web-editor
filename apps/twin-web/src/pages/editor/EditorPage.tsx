@@ -3,11 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { EditorCanvas } from '@/components/scene/EditorCanvas'
 import { DevicePalette } from '@/components/panels/DevicePalette'
 import { EditorCanvasHud } from '@/components/panels/EditorCanvasHud'
-import { EditorDeck } from '@/components/panels/EditorDeck'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
-import { SceneJsonToolbar } from '@/components/panels/SceneJsonToolbar'
 import { loadEquipmentCatalog, type CatalogAsset, type RenderStyle } from '@/services/loadEquipmentCatalog'
 import {
+  listNamedScenes,
   loadCurrentSceneIntoStore,
   loadNamedSceneIntoStore,
   saveCurrentSceneFromStore,
@@ -22,6 +21,8 @@ export function EditorPage() {
   const [catalogError, setCatalogError] = useState<string | null>(null)
   const [pendingPlacement, setPendingPlacement] = useState<CatalogAsset | null>(null)
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
+  const [sceneName, setSceneName] = useState('')
+  const [sceneRemark, setSceneRemark] = useState('')
   const applyStressTest = useSceneStore((s) => s.applyStressTest)
   const addDeviceFromAsset = useSceneStore((s) => s.addDeviceFromAsset)
   const canUndo = useSceneStore((s) => s.canUndo)
@@ -55,6 +56,35 @@ export function EditorPage() {
     void loader.then((result) => {
       if (!result.ok) useEditorUiStore.getState().setError(result.error)
     })
+  }, [sceneId])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!sceneId) {
+      void Promise.resolve().then(() => {
+        if (!cancelled) {
+          setSceneName('')
+          setSceneRemark('')
+        }
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+    void listNamedScenes().then((result) => {
+      if (cancelled || !result.ok) {
+        return
+      }
+      const matched = result.data.items.find((item) => item.id === sceneId)
+      if (!matched) {
+        return
+      }
+      setSceneName(matched.name)
+      setSceneRemark(matched.remark)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [sceneId])
 
   useEffect(() => {
@@ -127,13 +157,16 @@ export function EditorPage() {
   const saveScene = useCallback(async () => {
     setSaveStatus(null)
     useEditorUiStore.getState().clearError()
-    const result = sceneId ? await saveNamedSceneFromStore(sceneId) : await saveCurrentSceneFromStore()
+    const result =
+      sceneId
+        ? await saveNamedSceneFromStore(sceneId, sceneName.trim() || '未命名场景', sceneRemark.trim())
+        : await saveCurrentSceneFromStore()
     if (!result.ok) {
       useEditorUiStore.getState().setError(result.error)
       return
     }
     setSaveStatus(`${sceneId ? '命名场景已保存' : '已保存'} ${new Date(result.data.updatedAt).toLocaleTimeString()}`)
-  }, [sceneId])
+  }, [sceneId, sceneName, sceneRemark])
 
   return (
     <div className="editor-root">
@@ -142,6 +175,24 @@ export function EditorPage() {
           <h1>场景编排</h1>
           <p className="muted small">Esc 取消 · Delete 删除 · Home 重置视角</p>
           {sceneId ? <p className="muted small">正在编辑命名场景</p> : <p className="muted small">当前工作场景</p>}
+          {sceneId ? (
+            <div className="editor-scene-meta">
+              <input
+                aria-label="场景名称"
+                className="toolbar-input"
+                value={sceneName}
+                onChange={(event) => setSceneName(event.target.value)}
+                placeholder="场景名称"
+              />
+              <input
+                aria-label="场景备注"
+                className="toolbar-input"
+                value={sceneRemark}
+                onChange={(event) => setSceneRemark(event.target.value)}
+                placeholder="场景备注"
+              />
+            </div>
+          ) : null}
         </div>
         <div className="editor-header-actions">
           {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
@@ -173,11 +224,9 @@ export function EditorPage() {
             />
             <EditorCanvasHud />
           </main>
-          <EditorDeck />
         </div>
         <PropertiesPanel />
       </div>
-      <SceneJsonToolbar />
     </div>
   )
 }

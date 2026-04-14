@@ -8,10 +8,12 @@ import { ScenePreviewPage } from './ScenePreviewPage'
 const previewPageMocks = vi.hoisted(() => ({
   fetchNamedScene: vi.fn(),
   loadEquipmentCatalog: vi.fn(),
+  listNamedScenes: vi.fn(),
 }))
 
 vi.mock('@/services/loadDemoScene', () => ({
   fetchNamedScene: previewPageMocks.fetchNamedScene,
+  listNamedScenes: previewPageMocks.listNamedScenes,
 }))
 
 vi.mock('@/services/loadEquipmentCatalog', () => ({
@@ -29,6 +31,7 @@ describe('ScenePreviewPage', () => {
     cleanup()
     previewPageMocks.fetchNamedScene.mockReset()
     previewPageMocks.loadEquipmentCatalog.mockReset()
+    previewPageMocks.listNamedScenes.mockReset()
     previewPageMocks.fetchNamedScene.mockResolvedValue({
       ok: true,
       data: {
@@ -51,13 +54,29 @@ describe('ScenePreviewPage', () => {
       },
     })
     previewPageMocks.loadEquipmentCatalog.mockResolvedValue([])
+    previewPageMocks.listNamedScenes.mockResolvedValue({
+      ok: true,
+      data: {
+        items: [
+          {
+            id: 'scene-day',
+            name: '白天工况',
+            remark: '白天冷站运行',
+            updatedAt: '2026-04-06T08:00:00.000Z',
+            deviceCount: 1,
+            pipeCount: 0,
+            isCurrent: false,
+          },
+        ],
+      },
+    })
   })
 
   afterEach(() => {
     cleanup()
   })
 
-  it('loads a named scene and renders preview actions', async () => {
+  it('loads scene summary metadata and renders preview actions', async () => {
     render(
       <MemoryRouter initialEntries={['/scenes/scene-day/preview']}>
         <Routes>
@@ -71,7 +90,11 @@ describe('ScenePreviewPage', () => {
     })
     await screen.findByRole('link', { name: '返回场景管理' })
     await screen.findByRole('link', { name: '进入编辑' })
+    await screen.findByText('白天冷站运行')
+    await screen.findByText(/最近更新/)
     await screen.findByTestId('scene-preview-canvas')
+    assert.equal(screen.queryByRole('heading', { name: '设备预览' }), null)
+    assert.equal(screen.queryByRole('heading', { name: '管线预览' }), null)
   })
 
   it('toggles flow mode for the preview canvas', async () => {
