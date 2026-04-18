@@ -9,6 +9,8 @@ import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 import { sceneTheme } from '@/theme/sceneTheme'
 import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
 
+import { canRenderModelCanvas } from './assetModelPreview'
+
 type Props = {
   boundsHalfExtents: [number, number, number]
   modelUrl: string | null
@@ -16,7 +18,7 @@ type Props = {
 }
 
 export function AssetModelReferencePreview({ boundsHalfExtents, modelUrl, renderStyle }: Props) {
-  const canRenderCanvas = typeof window !== 'undefined' && 'ResizeObserver' in window
+  const canRenderCanvas = canRenderModelCanvas()
 
   if (!modelUrl || !canRenderCanvas) {
     return (

@@ -634,6 +634,19 @@ input {
   flex-wrap: wrap;
 }
 
+.assets-placement-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assets-placement-page__header {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
 .assets-chip--success {
   background: rgba(42, 197, 137, 0.12);
   border-color: rgba(42, 197, 137, 0.22);

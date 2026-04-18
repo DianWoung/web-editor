@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "test": "npm run test:node && npm run test:pages",
     "test:node": "node --test --experimental-strip-types src/services/api/runtimeApi.test.ts src/store/runtimeStore.test.ts",
-    "test:pages": "vitest run src/pages/runtimeIntegration.test.tsx src/store/editorUiStore.test.ts src/store/sceneStore.undo.test.ts src/pages/scenes/ScenesPage.test.tsx src/pages/scenes/ScenePreviewPage.test.tsx src/pages/editor/EditorPage.test.tsx src/pages/assets/AssetsPage.test.tsx src/pages/assets/TopologyTemplatesPage.test.tsx src/components/panels/SceneJsonToolbar.test.tsx",
+    "test:pages": "vitest run src/pages/runtimeIntegration.test.tsx src/store/editorUiStore.test.ts src/store/sceneStore.undo.test.ts src/pages/scenes/ScenesPage.test.tsx src/pages/scenes/ScenePreviewPage.test.tsx src/pages/editor/EditorPage.test.tsx src/pages/assets/AssetsPage.test.tsx src/pages/assets/AssetConnectorPlacementPage.test.tsx src/pages/assets/TopologyTemplatesPage.test.tsx src/components/panels/SceneJsonToolbar.test.tsx src/components/assets/assetConnectorProgress.test.ts src/components/assets/assetModelPreview.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {

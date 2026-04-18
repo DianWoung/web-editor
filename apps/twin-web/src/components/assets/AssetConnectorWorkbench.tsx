@@ -4,6 +4,7 @@ import type { AssetConnector } from '@/schemas/assets'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 
 import { AssetModelReferencePreview } from './AssetModelReferencePreview'
+import { AssetProjectionModelPreview } from './AssetProjectionModelPreview'
 import {
   completeAndAdvance,
   createPlacementState,
@@ -75,6 +76,8 @@ type ProjectionViewportProps = {
   boundsHalfExtents: [number, number, number]
   disabled?: boolean
   label: string
+  modelUrl: string | null
+  renderStyle: RenderStyle
   status: ConnectorPlacementStatus
   view: ProjectionView
   onPlace: (point: ViewportPoint) => void
@@ -88,6 +91,8 @@ function ProjectionViewport({
   boundsHalfExtents,
   disabled = false,
   label,
+  modelUrl,
+  renderStyle,
   status,
   view,
   onPlace,
@@ -137,6 +142,12 @@ function ProjectionViewport({
         className={`assets-projection-view__surface assets-projection-view__surface--${view}`}
         onClick={handleClick}
       >
+        <AssetProjectionModelPreview
+          boundsHalfExtents={boundsHalfExtents}
+          modelUrl={modelUrl}
+          renderStyle={renderStyle}
+          view={view}
+        />
         <div className="assets-projection-view__crosshair assets-projection-view__crosshair--horizontal" />
         <div className="assets-projection-view__crosshair assets-projection-view__crosshair--vertical" />
         <div className="assets-projection-view__silhouette" />
@@ -268,6 +279,8 @@ export function AssetConnectorWorkbench({
               boundsHalfExtents={boundsHalfExtents}
               disabled={disabled || !activeConnector}
               label="前视图"
+              modelUrl={modelUrl}
+              renderStyle={renderStyle}
               status={activeConnectorKey ? placement.statusByConnector[activeConnectorKey] ?? 'idle' : 'idle'}
               view="front"
               onPlace={(point) => handlePlace('front', point)}
@@ -282,6 +295,8 @@ export function AssetConnectorWorkbench({
                 boundsHalfExtents={boundsHalfExtents}
                 disabled={disabled || !activeConnector}
                 label="右视图"
+                modelUrl={modelUrl}
+                renderStyle={renderStyle}
                 status={activeConnectorKey ? placement.statusByConnector[activeConnectorKey] ?? 'idle' : 'idle'}
                 view="right"
                 onPlace={(point) => handlePlace('right', point)}
@@ -294,6 +309,8 @@ export function AssetConnectorWorkbench({
                 boundsHalfExtents={boundsHalfExtents}
                 disabled={disabled || !activeConnector}
                 label="顶视图"
+                modelUrl={modelUrl}
+                renderStyle={renderStyle}
                 status={activeConnectorKey ? placement.statusByConnector[activeConnectorKey] ?? 'idle' : 'idle'}
                 view="top"
                 onPlace={(point) => handlePlace('top', point)}
