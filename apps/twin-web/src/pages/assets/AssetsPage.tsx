@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { AssetBindingsEditor } from '@/components/assets/AssetBindingsEditor'
-import { AssetConnectorWorkbench } from '@/components/assets/AssetConnectorWorkbench'
+import { AssetConnectorProgressCard } from '@/components/assets/AssetConnectorProgressCard'
 import { AssetForm } from '@/components/assets/AssetForm'
 import { AssetList } from '@/components/assets/AssetList'
 import { AssetUploadPanel } from '@/components/assets/AssetUploadPanel'
 import { TopologyTemplatePicker } from '@/components/assets/TopologyTemplatePicker'
+import { summarizeConnectorProgress } from '@/components/assets/assetConnectorProgress'
 import type {
   AssetBinding,
   AssetConnector,
@@ -25,7 +26,6 @@ import {
   listTopologyTemplates,
   publishAsset,
   replaceAssetBindings,
-  replaceAssetPorts,
   updateAsset,
   uploadAssetModel,
 } from '@/services/api/assetsApi'
@@ -71,7 +71,6 @@ export function AssetsPage() {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [assetDraft, setAssetDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [connectorsDraft, setConnectorsDraft] = useState<AssetConnector[]>([])
-  const [connectorWorkflowMode, setConnectorWorkflowMode] = useState<'existing' | 'template'>('existing')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<TopologyTemplateDetail | null>(null)
   const [bindingsDraft, setBindingsDraft] = useState<Array<Omit<AssetBinding, 'id'>>>([])
@@ -90,6 +89,8 @@ export function AssetsPage() {
     () => items.find((item) => item.id === selectedAssetId) ?? null,
     [items, selectedAssetId],
   )
+
+  const connectorProgress = useMemo(() => summarizeConnectorProgress(connectorsDraft), [connectorsDraft])
 
   const refreshList = useCallback(
     async (preferredAssetId?: string | null) => {
@@ -144,7 +145,6 @@ export function AssetsPage() {
         modelUploadId: null,
       })
       setConnectorsDraft(detail.connectors.length > 0 ? detail.connectors : portsToFallbackConnectors(detail))
-      setConnectorWorkflowMode('existing')
       setBindingsDraft(
         detail.bindings.map((binding) => ({
           bindingType: binding.bindingType,
@@ -196,7 +196,6 @@ export function AssetsPage() {
     if (!selectedAssetId) {
       setAssetDraft(createEmptyDraft())
       setConnectorsDraft([])
-      setConnectorWorkflowMode('existing')
       setSelectedTemplateId('')
       setSelectedTemplateDetail(null)
       setBindingsDraft([])
@@ -254,7 +253,6 @@ export function AssetsPage() {
     try {
       const result = await applyTopologyTemplate(selectedAssetId, selectedTemplateId)
       setConnectorsDraft(result.connectors)
-      setConnectorWorkflowMode('template')
       setSelectedTemplateDetail(result.template)
       setItems((current) =>
         current.map((item) =>
@@ -288,36 +286,6 @@ export function AssetsPage() {
       setSelectedTemplateDetail(detail)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
-    }
-  }
-
-  const handleSaveConnectors = async () => {
-    if (!selectedAssetId) return
-    setSaving(true)
-    try {
-      const result = await replaceAssetPorts(
-        selectedAssetId,
-        connectorsDraft.map((connector) => ({
-          portKey: connector.portKey,
-          name: connector.name,
-          position: connector.geometry.anchor,
-          system: connector.system,
-          direction: connector.direction,
-          role: connector.role,
-          medium: connector.medium,
-          side: connector.side,
-          groupKey: connector.groupKey,
-          required: connector.required,
-          normal: connector.geometry.normal ?? null,
-        })),
-      )
-      setConnectorsDraft(result.connectors)
-      setConnectorWorkflowMode('existing')
-      setMessage(`已保存 ${result.connectors.length} 个连接点`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -474,16 +442,15 @@ export function AssetsPage() {
                 onSelectTemplate={handleSelectTemplate}
                 onApplyTemplate={handleApplyTemplate}
               />
-              <AssetConnectorWorkbench
-                connectors={connectorsDraft}
-                boundsHalfExtents={assetDraft.bounds.halfExtents}
-                disabled={saving || loadingDetail}
-                modelUrl={modelUpload?.publicUrl ?? selectedItem.modelUrl}
-                renderStyle={assetDraft.renderStyle}
-                workflowMode={connectorWorkflowMode}
-                onChange={setConnectorsDraft}
-                onSave={handleSaveConnectors}
-              />
+              {selectedItem ? (
+                <AssetConnectorProgressCard
+                  assetId={selectedItem.id}
+                  completed={connectorProgress.completed}
+                  total={connectorProgress.total}
+                  requiredRemaining={connectorProgress.requiredRemaining}
+                  publishReady={connectorProgress.publishReady}
+                />
+              ) : null}
             </div>
             <div className="assets-editor-column">
               <AssetUploadPanel

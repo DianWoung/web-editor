@@ -297,16 +297,8 @@ describe('AssetsPage', () => {
     await waitFor(() => {
       assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
     })
-
-    fireEvent.change(screen.getByLabelText('当前端点名称'), { target: { value: '主机回水口' } })
-    fireEvent.click(screen.getByRole('button', { name: /冷冻供水出口/ }))
-    fireEvent.click(screen.getByLabelText('当前端点必需'))
-    fireEvent.click(screen.getByRole('button', { name: '保存连接点' }))
-    await waitFor(() => {
-      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1].length, 2)
-      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][0]?.name, '主机回水口')
-      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][1]?.required, false)
-    })
+    await screen.findByRole('link', { name: '进入端点定位' })
+    await screen.findByText('2/2 已完成')
 
     fireEvent.click(screen.getByRole('button', { name: '保存绑定' }))
     await waitFor(() => {
@@ -349,7 +341,7 @@ describe('AssetsPage', () => {
     await screen.findByText(/\/api\/assets\/uploads\/upload-1\/model\.glb/)
   })
 
-  it('renders connector overrides with topology fields as read-only values', async () => {
+  it('renders connector placement summary on the asset page instead of the inline workbench', async () => {
     assetPageMocks.getAssetDetail.mockResolvedValue({
       ...makeDetail(),
       connectors: [
@@ -384,11 +376,12 @@ describe('AssetsPage', () => {
     )
 
     await screen.findByRole('heading', { name: 'Heat Pump' })
-    await screen.findByLabelText('当前端点名称')
-    await screen.findByDisplayValue('入口')
-    await screen.findByRole('button', { name: /出口/ })
+    await screen.findByRole('heading', { name: '端点定位摘要' })
+    await screen.findByRole('link', { name: '进入端点定位' })
+    await screen.findByText('2/2 已完成')
     assert.equal(screen.queryByLabelText('连接点角色'), null)
     assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
+    assert.equal(screen.queryByRole('heading', { name: '端点定位工作台' }), null)
   })
 
   it('applies a topology template and only exposes connector name and required as editable overrides', async () => {
@@ -410,55 +403,12 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
     })
 
-    await screen.findByLabelText('当前端点名称')
-    await screen.findByDisplayValue('冷冻回水入口')
-    await screen.findByRole('button', { name: /冷冻供水出口/ })
+    await screen.findByText('2/2 已完成')
+    await screen.findByText('所有必需端点已定位，可以继续发布')
+    await screen.findByRole('link', { name: '进入端点定位' })
+    assert.equal(screen.queryByRole('heading', { name: '端点定位工作台' }), null)
     assert.equal(screen.queryByLabelText('连接点角色'), null)
     assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
   })
 
-  it('guides connector placement one by one and advances after completion', async () => {
-    render(
-      <MemoryRouter initialEntries={['/assets']}>
-        <Routes>
-          <Route path="/assets" element={<AssetsPage />} />
-        </Routes>
-      </MemoryRouter>,
-    )
-
-    await screen.findByRole('heading', { name: 'Heat Pump' })
-
-    fireEvent.change(screen.getByLabelText('连接拓扑模板'), { target: { value: 'tpl_chw_supply_return' } })
-    fireEvent.click(screen.getByRole('button', { name: '应用模板' }))
-
-    await screen.findByRole('heading', { name: '端点定位工作台' })
-    await screen.findByText('当前端点：冷冻回水入口')
-
-    const frontViewport = screen.getByLabelText('前视图定位画布')
-    Object.defineProperty(frontViewport, 'getBoundingClientRect', {
-      value: () => ({
-        left: 0,
-        top: 0,
-        width: 200,
-        height: 200,
-        right: 200,
-        bottom: 200,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }),
-    })
-
-    fireEvent.click(frontViewport, { clientX: 100, clientY: 100 })
-
-    await waitFor(() => {
-      assert.ok(screen.getAllByText('已粗定位').length >= 1)
-    })
-    fireEvent.click(screen.getByRole('button', { name: '完成当前端点' }))
-
-    await screen.findByText('当前端点：冷冻供水出口')
-    await waitFor(() => {
-      assert.ok(screen.getAllByText('已完成').length >= 1)
-    })
-  })
 })
