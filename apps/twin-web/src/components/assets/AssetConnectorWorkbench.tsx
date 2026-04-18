@@ -184,23 +184,37 @@ export function AssetConnectorWorkbench({
 }: Props) {
   const connectorKeys = connectors.map((connector) => connector.connectorKey)
   const connectorKeySignature = connectorKeys.join('|')
+  return (
+    <AssetConnectorWorkbenchInner
+      key={`${workflowMode}:${connectorKeySignature}`}
+      connectors={connectors}
+      boundsHalfExtents={boundsHalfExtents}
+      disabled={disabled}
+      modelUrl={modelUrl}
+      renderStyle={renderStyle}
+      workflowMode={workflowMode}
+      onChange={onChange}
+      onSave={onSave}
+    />
+  )
+}
+
+function AssetConnectorWorkbenchInner({
+  connectors,
+  boundsHalfExtents,
+  disabled = false,
+  modelUrl,
+  renderStyle,
+  workflowMode,
+  onChange,
+  onSave,
+}: Props) {
+  const connectorKeys = connectors.map((connector) => connector.connectorKey)
   const [placement, setPlacement] = useState<PlacementState>(() => nextPlacementState(connectorKeys, workflowMode))
 
-  useEffect(() => {
-    setPlacement(nextPlacementState(connectorKeys, workflowMode))
-  }, [connectorKeySignature, workflowMode])
-
   const activeConnector =
-    connectors.find((connector) => connector.connectorKey === placement.activeConnectorKey) ?? connectors[0] ?? null
+    connectors.find((connector) => connector.connectorKey === placement.activeConnectorKey) ?? null
   const activeConnectorKey = activeConnector?.connectorKey ?? null
-
-  useEffect(() => {
-    if (activeConnectorKey || connectors.length === 0) return
-    setPlacement((current) => ({
-      ...current,
-      activeConnectorKey: connectors[0]?.connectorKey ?? null,
-    }))
-  }, [activeConnectorKey, connectors])
 
   const handlePlace = (view: ProjectionView, point: ViewportPoint) => {
     if (!activeConnector) return
