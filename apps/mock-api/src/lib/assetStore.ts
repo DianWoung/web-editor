@@ -3,6 +3,7 @@ import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { HttpError } from './httpErrors.ts'
+import { resolveLegacyModelPath } from './legacyModelPath.ts'
 import {
   assetJsonSchema,
   catalogSchema,
@@ -276,8 +277,7 @@ function getLegacyModelUrl(dataRoot: string, assetKey: string, declaresModelGlb:
   if (!declaresModelGlb) {
     return null
   }
-  const modelPath = path.join(dataRoot, 'equipment', assetKey, 'model.glb')
-  return existsSync(modelPath) ? `/api/assets/models/${assetKey}` : null
+  return resolveLegacyModelPath(dataRoot, assetKey) ? `/api/assets/models/${assetKey}` : null
 }
 
 function toAssetListItem(

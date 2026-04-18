@@ -1365,6 +1365,10 @@ input {
   margin: 0 0 8px;
 }
 
+.scenes-card h3 {
+  margin: 0;
+}
+
 .scenes-card--hero {
   background: linear-gradient(135deg, rgba(69, 196, 232, 0.1), rgba(26, 45, 66, 0.95));
 }
@@ -1387,6 +1391,38 @@ input {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 12px;
+}
+
+.scenes-workbench {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.scenes-workbench-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scenes-workbench-header__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scenes-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  color: var(--twin-text-muted);
+}
+
+.scene-create-dialog__fields {
+  display: grid;
+  gap: 12px;
 }
 
 .scenes-list-header,
@@ -1443,6 +1479,55 @@ input {
   gap: 8px;
 }
 
+.scenes-card-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scenes-scene-card {
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--twin-border);
+  background: rgba(12, 18, 28, 0.32);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scenes-scene-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.scenes-scene-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+
+.scenes-scene-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--twin-text-muted);
+  font-size: 0.92rem;
+}
+
+.scenes-scene-card__meta span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--twin-border);
+  background: rgba(69, 196, 232, 0.06);
+}
+
 .scenes-preview-grid {
   margin-top: 14px;
   display: grid;
@@ -1495,6 +1580,13 @@ input {
   min-height: 0;
   flex-direction: column;
   background: radial-gradient(circle at top left, rgba(69, 196, 232, 0.1), transparent 35%), var(--twin-bg-raised);
+}
+
+@media (max-width: 960px) {
+  .scenes-workbench-header__title,
+  .scenes-scene-card__head {
+    flex-direction: column;
+  }
 }
 
 .scene-preview-topbar {

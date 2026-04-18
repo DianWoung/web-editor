@@ -7,14 +7,12 @@ import { ScenesPage } from './ScenesPage'
 
 const scenesPageMocks = vi.hoisted(() => ({
   listNamedScenes: vi.fn(),
-  fetchNamedScene: vi.fn(),
   createEmptyNamedScene: vi.fn(),
   deleteNamedScene: vi.fn(),
 }))
 
 vi.mock('@/services/loadDemoScene', () => ({
   listNamedScenes: scenesPageMocks.listNamedScenes,
-  fetchNamedScene: scenesPageMocks.fetchNamedScene,
   createEmptyNamedScene: scenesPageMocks.createEmptyNamedScene,
   deleteNamedScene: scenesPageMocks.deleteNamedScene,
 }))
@@ -23,7 +21,6 @@ describe('ScenesPage', () => {
   beforeEach(() => {
     cleanup()
     scenesPageMocks.listNamedScenes.mockReset()
-    scenesPageMocks.fetchNamedScene.mockReset()
     scenesPageMocks.createEmptyNamedScene.mockReset()
     scenesPageMocks.deleteNamedScene.mockReset()
   })
@@ -32,7 +29,7 @@ describe('ScenesPage', () => {
     cleanup()
   })
 
-  it('renders named scenes and previews the selected scene', async () => {
+  it('renders scenes in a single compact card list', async () => {
     scenesPageMocks.listNamedScenes.mockResolvedValue({
       ok: true,
       data: {
@@ -49,38 +46,6 @@ describe('ScenesPage', () => {
         ],
       },
     })
-    scenesPageMocks.fetchNamedScene.mockResolvedValue({
-      ok: true,
-      data: {
-        version: 1,
-        devices: [
-          {
-            id: 'CH-01',
-            type: 'chiller',
-            name: '主机 1',
-            assetId: 'large_air_cooled_chiller_iot_v1',
-            position: [0, 0, 0],
-            rotation: [0, 0, 0],
-            system: 'CHW',
-            tags: [],
-            boundsHalfExtents: [1, 1, 1],
-          },
-          {
-            id: 'PUMP-01',
-            type: 'pump',
-            name: '水泵 1',
-            assetId: 'parallel_pump_skid_iot_v1',
-            position: [1, 0, 0],
-            rotation: [0, 0, 0],
-            system: 'CHW',
-            tags: [],
-            boundsHalfExtents: [1, 1, 1],
-          },
-        ],
-        portGroups: [],
-        pipes: [{ id: 'PIPE-1', from: 'CH-01.out', to: 'PUMP-01.in', system: 'CHW', routeType: 'orthogonal', level: 'main' }],
-      },
-    })
 
     render(
       <MemoryRouter initialEntries={['/scenes']}>
@@ -90,13 +55,16 @@ describe('ScenesPage', () => {
       </MemoryRouter>,
     )
 
-    await screen.findByRole('heading', { name: '白天工况' })
+    await screen.findByRole('heading', { name: '场景' })
+    await screen.findByRole('button', { name: '新增场景' })
+    await screen.findByText('白天工况')
     await screen.findByRole('link', { name: '总览' })
     await screen.findByRole('link', { name: '预览' })
-    await screen.findAllByText('白天冷站运行')
-    await screen.findByText('设备数')
-    await screen.findByText('2')
-    await screen.findByText(/最近更新/)
+    await screen.findByText('白天冷站运行')
+    await screen.findByText('2 台设备')
+    await screen.findByText('1 条管线')
+    assert.equal(screen.queryByRole('heading', { name: '状态' }), null)
+    assert.equal(screen.queryByRole('button', { name: '刷新列表' }), null)
   }, 10000)
 
   it('creates a new scene with remark and exposes edit entry', async () => {
@@ -122,11 +90,6 @@ describe('ScenesPage', () => {
       ok: true,
       data: { sceneId: 'scene-night', name: '夜间工况', remark: '夜间低负荷', updatedAt: '2026-04-06T09:00:00.000Z' },
     })
-    scenesPageMocks.fetchNamedScene.mockResolvedValue({
-      ok: true,
-      data: { version: 1, devices: [], portGroups: [], pipes: [] },
-    })
-
     render(
       <MemoryRouter initialEntries={['/scenes']}>
         <Routes>
@@ -136,6 +99,8 @@ describe('ScenesPage', () => {
       </MemoryRouter>,
     )
 
+    fireEvent.click(screen.getByRole('button', { name: '新增场景' }))
+    await screen.findByRole('heading', { name: '新增场景' })
     fireEvent.change(screen.getByLabelText('新建场景名称'), { target: { value: '夜间工况' } })
     fireEvent.change(screen.getByLabelText('新建场景备注'), { target: { value: '夜间低负荷' } })
     fireEvent.click(screen.getByRole('button', { name: '创建并编辑' }))
@@ -166,10 +131,6 @@ describe('ScenesPage', () => {
         },
       })
       .mockResolvedValueOnce({ ok: true, data: { items: [] } })
-    scenesPageMocks.fetchNamedScene.mockResolvedValue({
-      ok: true,
-      data: { version: 1, devices: [], portGroups: [], pipes: [] },
-    })
     scenesPageMocks.deleteNamedScene.mockResolvedValue({ ok: true, data: { sceneId: 'scene-delete' } })
 
     render(
