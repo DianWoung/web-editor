@@ -49,6 +49,25 @@ type AssetBindingInput = {
   note: string
 }
 
+type TopologyTemplateMutationInput = {
+  templateKey: string
+  displayName: string
+  category: string
+  description: string
+  defaultSystem: string
+  connectors: Array<{
+    connectorKey: string
+    name: string
+    system: string
+    role: string
+    medium?: string | null
+    direction: string
+    required?: boolean
+    position: [number, number, number]
+    normal?: [number, number, number] | null
+  }>
+}
+
 type PersistedAssetRow = {
   id: string
   asset_key: string
@@ -831,6 +850,23 @@ export function createAssetStore(dataRoot: string) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const attachUploadStmt = db.prepare('UPDATE equipment_uploads SET asset_id = ? WHERE id = ?')
+  const insertTopologyTemplateStmt = db.prepare(`
+    INSERT INTO topology_templates (
+      id, template_key, display_name, category, description, default_system, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
+  const updateTopologyTemplateStmt = db.prepare(`
+    UPDATE topology_templates
+    SET template_key = ?, display_name = ?, category = ?, description = ?, default_system = ?, updated_at = ?
+    WHERE id = ?
+  `)
+  const deleteTopologyTemplateConnectorsStmt = db.prepare('DELETE FROM topology_template_connectors WHERE template_id = ?')
+  const insertTopologyTemplateConnectorStmt = db.prepare(`
+    INSERT INTO topology_template_connectors (
+      id, template_id, connector_key, name, system, role, medium, direction, required,
+      position_x, position_y, position_z, normal_x, normal_y, normal_z, sort_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `)
   const applyTopologyTemplateStmt = db.prepare(`
     UPDATE equipment_assets
     SET topology_template_id = ?, topology_snapshot_version = ?, updated_at = ?
@@ -843,6 +879,99 @@ export function createAssetStore(dataRoot: string) {
     },
 
     getTopologyTemplate(templateId: string) {
+      return getTopologyTemplateDetail(templateId)
+    },
+
+    createTopologyTemplate(input: TopologyTemplateMutationInput) {
+      const duplicate = db
+        .prepare('SELECT id FROM topology_templates WHERE template_key = ?')
+        .get(input.templateKey) as { id: string } | undefined
+      if (duplicate) {
+        throw new HttpError(409, `模板标识已存在：${input.templateKey}`)
+      }
+
+      const templateId = createId('topology_template')
+      const now = new Date().toISOString()
+      transaction(() => {
+        insertTopologyTemplateStmt.run(
+          templateId,
+          input.templateKey,
+          input.displayName,
+          input.category,
+          input.description,
+          input.defaultSystem,
+          'active',
+          now,
+          now,
+        )
+        for (const [index, connector] of input.connectors.entries()) {
+          insertTopologyTemplateConnectorStmt.run(
+            createId('topology_template_connector'),
+            templateId,
+            connector.connectorKey,
+            connector.name,
+            connector.system,
+            connector.role,
+            connector.medium ?? null,
+            connector.direction,
+            connector.required ? 1 : 0,
+            connector.position[0],
+            connector.position[1],
+            connector.position[2],
+            connector.normal?.[0] ?? null,
+            connector.normal?.[1] ?? null,
+            connector.normal?.[2] ?? null,
+            index,
+          )
+        }
+      })
+
+      return getTopologyTemplateDetail(templateId)
+    },
+
+    updateTopologyTemplate(templateId: string, input: TopologyTemplateMutationInput) {
+      getTopologyTemplateRow(templateId)
+      const duplicate = db
+        .prepare('SELECT id FROM topology_templates WHERE template_key = ? AND id != ?')
+        .get(input.templateKey, templateId) as { id: string } | undefined
+      if (duplicate) {
+        throw new HttpError(409, `模板标识已存在：${input.templateKey}`)
+      }
+
+      const updatedAt = new Date().toISOString()
+      transaction(() => {
+        updateTopologyTemplateStmt.run(
+          input.templateKey,
+          input.displayName,
+          input.category,
+          input.description,
+          input.defaultSystem,
+          updatedAt,
+          templateId,
+        )
+        deleteTopologyTemplateConnectorsStmt.run(templateId)
+        for (const [index, connector] of input.connectors.entries()) {
+          insertTopologyTemplateConnectorStmt.run(
+            createId('topology_template_connector'),
+            templateId,
+            connector.connectorKey,
+            connector.name,
+            connector.system,
+            connector.role,
+            connector.medium ?? null,
+            connector.direction,
+            connector.required ? 1 : 0,
+            connector.position[0],
+            connector.position[1],
+            connector.position[2],
+            connector.normal?.[0] ?? null,
+            connector.normal?.[1] ?? null,
+            connector.normal?.[2] ?? null,
+            index,
+          )
+        }
+      })
+
       return getTopologyTemplateDetail(templateId)
     },
 

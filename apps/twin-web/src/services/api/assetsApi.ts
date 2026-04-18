@@ -9,8 +9,10 @@ import {
   assetUploadResponseSchema,
   assetVersionsSchema,
   type AssetMutationInput,
+  type TopologyTemplateMutationInput,
   topologyTemplateDetailSchema,
   topologyTemplateListSchema,
+  topologyTemplateMutationSchema,
 } from '@/schemas/assets'
 
 export async function listAssets(status: 'draft' | 'published' | 'archived' | 'all' = 'all') {
@@ -35,6 +37,24 @@ export async function listTopologyTemplates() {
 export async function getTopologyTemplate(templateId: string) {
   return topologyTemplateDetailSchema.parse(
     await apiRequest<unknown>(`/assets/topology-templates/${encodeURIComponent(templateId)}`),
+  )
+}
+
+export async function createTopologyTemplate(input: TopologyTemplateMutationInput) {
+  return topologyTemplateDetailSchema.parse(
+    await apiRequest<unknown>('/assets/topology-templates', {
+      method: 'POST',
+      body: JSON.stringify(topologyTemplateMutationSchema.parse(input)),
+    }),
+  )
+}
+
+export async function updateTopologyTemplate(templateId: string, input: TopologyTemplateMutationInput) {
+  return topologyTemplateDetailSchema.parse(
+    await apiRequest<unknown>(`/assets/topology-templates/${encodeURIComponent(templateId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(topologyTemplateMutationSchema.parse(input)),
+    }),
   )
 }
 

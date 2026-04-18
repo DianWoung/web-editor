@@ -13,6 +13,7 @@ import {
   assetMutationSchema,
   assetPortsPayloadSchema,
   assetStatusSchema,
+  topologyTemplateMutationSchema,
 } from '../schemas.ts'
 
 function formatZodError(error: ZodError) {
@@ -99,6 +100,34 @@ export function createAssetsRouter(dataRoot: string, assetStore: AssetStore) {
   router.get('/topology-templates/:templateId', (req, res, next) => {
     try {
       res.json(assetStore.getTopologyTemplate(req.params.templateId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/topology-templates', (req, res, next) => {
+    const parsed = topologyTemplateMutationSchema.safeParse(req.body)
+    if (!parsed.success) {
+      next(new HttpError(400, `模板校验失败：${formatZodError(parsed.error)}`))
+      return
+    }
+
+    try {
+      res.status(201).json(assetStore.createTopologyTemplate(parsed.data))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/topology-templates/:templateId', (req, res, next) => {
+    const parsed = topologyTemplateMutationSchema.safeParse(req.body)
+    if (!parsed.success) {
+      next(new HttpError(400, `模板校验失败：${formatZodError(parsed.error)}`))
+      return
+    }
+
+    try {
+      res.json(assetStore.updateTopologyTemplate(req.params.templateId, parsed.data))
     } catch (error) {
       next(error)
     }

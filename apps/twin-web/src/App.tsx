@@ -27,6 +27,11 @@ const AssetsPage = lazy(async () => {
   return { default: mod.AssetsPage }
 })
 
+const TopologyTemplatesPage = lazy(async () => {
+  const mod = await import('@/pages/assets/TopologyTemplatesPage')
+  return { default: mod.TopologyTemplatesPage }
+})
+
 const ScenePreviewPage = lazy(async () => {
   const mod = await import('@/pages/scenes/ScenePreviewPage')
   return { default: mod.ScenePreviewPage }
@@ -54,6 +59,7 @@ export default function App() {
           <Route path="/overview" element={<Navigate to="/scenes" replace />} />
           <Route path="/scenes" element={<ScenesPage />} />
           <Route path="/assets" element={<AssetsPage />} />
+          <Route path="/assets/topology-templates" element={<TopologyTemplatesPage />} />
           <Route path="/scenes/:sceneId/overview" element={<OverviewPage />} />
           <Route path="/scenes/:sceneId/preview" element={<ScenePreviewPage />} />
           <Route path="/detail/:deviceId" element={<DeviceDetailPage />} />

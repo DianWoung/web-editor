@@ -299,3 +299,68 @@ test('createAssetStore lists topology templates and applies a template snapshot 
     ],
   })
 })
+
+test('createAssetStore can create and update topology templates', async () => {
+  const dataRoot = await mkdtemp(path.join(tmpdir(), 'asset-store-'))
+  const store = createAssetStore(dataRoot)
+
+  const created = store.createTopologyTemplate({
+    templateKey: 'dual_power_signal',
+    displayName: '双电源信号接口',
+    category: 'power_signal',
+    description: '包含主电源、备用电源和控制信号的模板。',
+    defaultSystem: 'ELE',
+    connectors: [
+      {
+        connectorKey: 'power_main',
+        name: '主电源输入',
+        system: 'ELE',
+        role: 'power_in',
+        medium: 'electric',
+        direction: 'in',
+        required: true,
+        position: [-0.8, 0, 0],
+        normal: [-1, 0, 0],
+      },
+      {
+        connectorKey: 'signal_io',
+        name: '控制信号',
+        system: 'SIG',
+        role: 'signal',
+        medium: 'signal',
+        direction: 'in',
+        required: false,
+        position: [0.8, 0, 0],
+        normal: [1, 0, 0],
+      },
+    ],
+  })
+
+  assert.equal(created.templateKey, 'dual_power_signal')
+  assert.equal(created.connectors.length, 2)
+
+  const updated = store.updateTopologyTemplate(created.id, {
+    templateKey: 'dual_power_signal',
+    displayName: '双电源与信号接口',
+    category: 'power_signal',
+    description: '更新后的模板说明。',
+    defaultSystem: 'ELE',
+    connectors: [
+      {
+        connectorKey: 'power_main',
+        name: '主电源输入',
+        system: 'ELE',
+        role: 'power_in',
+        medium: 'electric',
+        direction: 'in',
+        required: true,
+        position: [-1, 0, 0],
+        normal: [-1, 0, 0],
+      },
+    ],
+  })
+
+  assert.equal(updated.displayName, '双电源与信号接口')
+  assert.equal(updated.connectors.length, 1)
+  assert.equal(updated.connectors[0]?.geometry.anchor[0], -1)
+})

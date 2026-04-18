@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { TopologyTemplateDetail, TopologyTemplateListItem } from '@/schemas/assets'
 
 type Props = {
@@ -28,9 +29,14 @@ export function TopologyTemplatePicker({
           <h2>连接拓扑模板</h2>
           <p className="muted small">先选择标准拓扑，再生成资产自己的连接点快照。</p>
         </div>
-        <button type="button" className="primary" onClick={onApplyTemplate} disabled={disabled || !selectedTemplateId}>
-          应用模板
-        </button>
+        <div className="assets-inline-actions">
+          <Link className="secondary" to="/assets/topology-templates">
+            管理模板库
+          </Link>
+          <button type="button" className="primary" onClick={onApplyTemplate} disabled={disabled || !selectedTemplateId}>
+            应用模板
+          </button>
+        </div>
       </div>
 
       <label className="assets-template-picker">

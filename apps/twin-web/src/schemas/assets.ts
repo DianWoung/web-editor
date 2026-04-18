@@ -60,6 +60,27 @@ export const topologyTemplateListSchema = z.object({
   items: z.array(topologyTemplateListItemSchema),
 })
 
+export const topologyTemplateConnectorMutationSchema = z.object({
+  connectorKey: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(120),
+  system: z.string().trim().min(1).max(80),
+  role: z.string().trim().min(1).max(80),
+  medium: z.string().trim().min(1).max(80).nullable().optional(),
+  direction: z.string().trim().min(1).max(40),
+  required: z.boolean().optional().default(false),
+  position: z.tuple([z.number(), z.number(), z.number()]),
+  normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
+})
+
+export const topologyTemplateMutationSchema = z.object({
+  templateKey: z.string().trim().min(1).max(80),
+  displayName: z.string().trim().min(1).max(120),
+  category: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(240).default(''),
+  defaultSystem: z.string().trim().min(1).max(80),
+  connectors: z.array(topologyTemplateConnectorMutationSchema).min(1),
+})
+
 export const assetPortSchema = z.object({
   id: z.string().min(1),
   portKey: z.string().min(1),
@@ -198,4 +219,5 @@ export type AssetMutationInput = z.infer<typeof assetMutationSchema>
 export type AssetPort = z.infer<typeof assetPortSchema>
 export type AssetUpload = z.infer<typeof assetUploadSchema>
 export type TopologyTemplateDetail = z.infer<typeof topologyTemplateDetailSchema>
+export type TopologyTemplateMutationInput = z.infer<typeof topologyTemplateMutationSchema>
 export type TopologyTemplateListItem = z.infer<typeof topologyTemplateListItemSchema>

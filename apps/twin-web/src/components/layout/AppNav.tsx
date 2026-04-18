@@ -14,6 +14,9 @@ export function AppNav() {
         <NavLink to="/assets" className={linkClass} end>
           资产管理
         </NavLink>
+        <NavLink to="/assets/topology-templates" className={linkClass} end>
+          拓扑模板
+        </NavLink>
       </nav>
     </header>
   )
