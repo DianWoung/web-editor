@@ -6,6 +6,7 @@ import type { ZodError } from 'zod'
 
 import type { AssetStore } from '../lib/assetStore.ts'
 import { HttpError } from '../lib/httpErrors.ts'
+import { resolveLegacyModelPath } from '../lib/legacyModelPath.ts'
 import { createStorageAdapter } from '../lib/storageAdapter.ts'
 import {
   assetBindingsPayloadSchema,
@@ -78,12 +79,15 @@ export function createAssetsRouter(dataRoot: string, assetStore: AssetStore) {
 
   router.get('/models/:assetId', async (req, res, next) => {
     try {
-      const modelPath = path.join(dataRoot, 'equipment', req.params.assetId, 'model.glb')
+      const modelPath = resolveLegacyModelPath(dataRoot, req.params.assetId)
+      if (!modelPath) {
+        throw new HttpError(404, `模型文件不存在：${req.params.assetId}`)
+      }
       const buffer = await readFile(modelPath)
       res.type('model/gltf-binary')
       res.send(buffer)
-    } catch {
-      next(new HttpError(404, `模型文件不存在：${req.params.assetId}`))
+    } catch (error) {
+      next(error)
     }
   })
 

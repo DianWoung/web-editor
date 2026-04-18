@@ -85,6 +85,47 @@ test('createAssetStore only exposes a legacy modelUrl when model.glb exists on d
   assert.equal(store.getPublishedAssetJson('legacy_model_v1').modelGlb, true)
 })
 
+test('createAssetStore also resolves legacy models from import packs', async () => {
+  const dataRoot = await setupLegacyEquipmentFixture()
+  await mkdir(path.join(dataRoot, 'assets', 'import-packs', 'demo-pack', 'legacy_import_pack_v1'), { recursive: true })
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'catalog.json'),
+    JSON.stringify({ assets: ['legacy_pump_v1', 'legacy_import_pack_v1'] }, null, 2),
+  )
+  await mkdir(path.join(dataRoot, 'equipment', 'legacy_import_pack_v1'), { recursive: true })
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'legacy_import_pack_v1', 'asset.json'),
+    JSON.stringify(
+      {
+        assetVersion: 1,
+        assetId: 'legacy_import_pack_v1',
+        displayName: 'Legacy Import Pack',
+        type: 'pump',
+        defaultSystem: 'CHW',
+        bounds: { halfExtents: [1, 1, 1] },
+        renderStyle: 'box',
+        modelGlb: true,
+      },
+      null,
+      2,
+    ),
+  )
+  await writeFile(
+    path.join(dataRoot, 'equipment', 'legacy_import_pack_v1', 'ports.json'),
+    JSON.stringify({ ports: [] }, null, 2),
+  )
+  await writeFile(
+    path.join(dataRoot, 'assets', 'import-packs', 'demo-pack', 'legacy_import_pack_v1', 'model.glb'),
+    'import-pack-glb',
+  )
+
+  const store = createAssetStore(dataRoot)
+  const fromImportPack = store.listAssets('all').items.find((item) => item.assetKey === 'legacy_import_pack_v1')
+
+  assert.equal(fromImportPack?.modelUrl, '/api/assets/models/legacy_import_pack_v1')
+  assert.equal(store.getPublishedAssetJson('legacy_import_pack_v1').modelGlb, true)
+})
+
 test('createAssetStore imports missing legacy equipment even when the database already has assets', async () => {
   const dataRoot = await setupLegacyEquipmentFixture()
   const dbPath = path.join(dataRoot, 'asset-center.sqlite')
