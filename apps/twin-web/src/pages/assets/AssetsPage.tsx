@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { AssetBindingsEditor } from '@/components/assets/AssetBindingsEditor'
+import { AssetConnectorWorkbench } from '@/components/assets/AssetConnectorWorkbench'
 import { AssetForm } from '@/components/assets/AssetForm'
 import { AssetList } from '@/components/assets/AssetList'
 import { AssetUploadPanel } from '@/components/assets/AssetUploadPanel'
-import { ConnectorOverridesTable } from '@/components/assets/ConnectorOverridesTable'
 import { TopologyTemplatePicker } from '@/components/assets/TopologyTemplatePicker'
 import type {
   AssetBinding,
@@ -71,6 +71,7 @@ export function AssetsPage() {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [assetDraft, setAssetDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [connectorsDraft, setConnectorsDraft] = useState<AssetConnector[]>([])
+  const [connectorWorkflowMode, setConnectorWorkflowMode] = useState<'existing' | 'template'>('existing')
   const [selectedTemplateId, setSelectedTemplateId] = useState('')
   const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<TopologyTemplateDetail | null>(null)
   const [bindingsDraft, setBindingsDraft] = useState<Array<Omit<AssetBinding, 'id'>>>([])
@@ -143,6 +144,7 @@ export function AssetsPage() {
         modelUploadId: null,
       })
       setConnectorsDraft(detail.connectors.length > 0 ? detail.connectors : portsToFallbackConnectors(detail))
+      setConnectorWorkflowMode('existing')
       setBindingsDraft(
         detail.bindings.map((binding) => ({
           bindingType: binding.bindingType,
@@ -194,6 +196,7 @@ export function AssetsPage() {
     if (!selectedAssetId) {
       setAssetDraft(createEmptyDraft())
       setConnectorsDraft([])
+      setConnectorWorkflowMode('existing')
       setSelectedTemplateId('')
       setSelectedTemplateDetail(null)
       setBindingsDraft([])
@@ -251,6 +254,7 @@ export function AssetsPage() {
     try {
       const result = await applyTopologyTemplate(selectedAssetId, selectedTemplateId)
       setConnectorsDraft(result.connectors)
+      setConnectorWorkflowMode('template')
       setSelectedTemplateDetail(result.template)
       setItems((current) =>
         current.map((item) =>
@@ -308,6 +312,7 @@ export function AssetsPage() {
         })),
       )
       setConnectorsDraft(result.connectors)
+      setConnectorWorkflowMode('existing')
       setMessage(`已保存 ${result.connectors.length} 个连接点`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -469,9 +474,13 @@ export function AssetsPage() {
                 onSelectTemplate={handleSelectTemplate}
                 onApplyTemplate={handleApplyTemplate}
               />
-              <ConnectorOverridesTable
+              <AssetConnectorWorkbench
                 connectors={connectorsDraft}
+                boundsHalfExtents={assetDraft.bounds.halfExtents}
                 disabled={saving || loadingDetail}
+                modelUrl={modelUpload?.publicUrl ?? selectedItem.modelUrl}
+                renderStyle={assetDraft.renderStyle}
+                workflowMode={connectorWorkflowMode}
                 onChange={setConnectorsDraft}
                 onSave={handleSaveConnectors}
               />

@@ -298,8 +298,9 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
     })
 
-    fireEvent.change(screen.getByLabelText('连接点名称 1'), { target: { value: '主机回水口' } })
-    fireEvent.click(screen.getByLabelText('连接点必需 2'))
+    fireEvent.change(screen.getByLabelText('当前端点名称'), { target: { value: '主机回水口' } })
+    fireEvent.click(screen.getByRole('button', { name: /冷冻供水出口/ }))
+    fireEvent.click(screen.getByLabelText('当前端点必需'))
     fireEvent.click(screen.getByRole('button', { name: '保存连接点' }))
     await waitFor(() => {
       assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1].length, 2)
@@ -383,9 +384,9 @@ describe('AssetsPage', () => {
     )
 
     await screen.findByRole('heading', { name: 'Heat Pump' })
+    await screen.findByLabelText('当前端点名称')
     await screen.findByDisplayValue('入口')
-    await screen.findByText('return')
-    await screen.findByText('supply')
+    await screen.findByRole('button', { name: /出口/ })
     assert.equal(screen.queryByLabelText('连接点角色'), null)
     assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
   })
@@ -409,10 +410,55 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
     })
 
+    await screen.findByLabelText('当前端点名称')
     await screen.findByDisplayValue('冷冻回水入口')
-    await screen.findByText('return')
-    await screen.findByText('supply')
+    await screen.findByRole('button', { name: /冷冻供水出口/ })
     assert.equal(screen.queryByLabelText('连接点角色'), null)
     assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
+  })
+
+  it('guides connector placement one by one and advances after completion', async () => {
+    render(
+      <MemoryRouter initialEntries={['/assets']}>
+        <Routes>
+          <Route path="/assets" element={<AssetsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('heading', { name: 'Heat Pump' })
+
+    fireEvent.change(screen.getByLabelText('连接拓扑模板'), { target: { value: 'tpl_chw_supply_return' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用模板' }))
+
+    await screen.findByRole('heading', { name: '端点定位工作台' })
+    await screen.findByText('当前端点：冷冻回水入口')
+
+    const frontViewport = screen.getByLabelText('前视图定位画布')
+    Object.defineProperty(frontViewport, 'getBoundingClientRect', {
+      value: () => ({
+        left: 0,
+        top: 0,
+        width: 200,
+        height: 200,
+        right: 200,
+        bottom: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+
+    fireEvent.click(frontViewport, { clientX: 100, clientY: 100 })
+
+    await waitFor(() => {
+      assert.ok(screen.getAllByText('已粗定位').length >= 1)
+    })
+    fireEvent.click(screen.getByRole('button', { name: '完成当前端点' }))
+
+    await screen.findByText('当前端点：冷冻供水出口')
+    await waitFor(() => {
+      assert.ok(screen.getAllByText('已完成').length >= 1)
+    })
   })
 })
