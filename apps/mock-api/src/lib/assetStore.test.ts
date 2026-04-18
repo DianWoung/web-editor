@@ -222,3 +222,80 @@ test('createAssetStore persists connector semantics and still projects published
     ],
   })
 })
+
+test('createAssetStore lists topology templates and applies a template snapshot to an asset', async () => {
+  const dataRoot = await mkdtemp(path.join(tmpdir(), 'asset-store-'))
+  const store = createAssetStore(dataRoot)
+
+  const created = store.createAssetDraft({
+    assetKey: 'template_chiller_v1',
+    displayName: 'Template Chiller',
+    type: 'chiller',
+    defaultSystem: 'CHW',
+    assetVersion: 1,
+    renderStyle: 'box',
+    bounds: { halfExtents: [1, 1, 1] },
+    modelUploadId: null,
+  })
+
+  const templates = store.listTopologyTemplates()
+  assert.ok(templates.items.length > 0)
+
+  const selectedTemplate = templates.items.find((item) => item.templateKey === 'chw_supply_return')
+  assert.ok(selectedTemplate)
+
+  const applied = store.applyTopologyTemplate(created.asset.id, selectedTemplate.id)
+  assert.equal(applied.template.id, selectedTemplate.id)
+  assert.equal(applied.connectors.length, 2)
+  assert.deepEqual(
+    applied.connectors.map((connector) => ({
+      connectorKey: connector.connectorKey,
+      system: connector.system,
+      role: connector.role,
+      direction: connector.direction,
+      required: connector.required,
+    })),
+    [
+      {
+        connectorKey: 'chw_in',
+        system: 'CHW',
+        role: 'return',
+        direction: 'in',
+        required: true,
+      },
+      {
+        connectorKey: 'chw_out',
+        system: 'CHW',
+        role: 'supply',
+        direction: 'out',
+        required: true,
+      },
+    ],
+  )
+
+  const detail = store.getAsset(created.asset.id)
+  assert.equal(detail.asset.topologyTemplateId, selectedTemplate.id)
+  assert.equal(detail.asset.topologyTemplateKey, selectedTemplate.templateKey)
+  assert.equal(detail.asset.topologyTemplateName, selectedTemplate.displayName)
+  assert.equal(detail.connectors.length, 2)
+
+  store.publishAsset(created.asset.id)
+  assert.deepEqual(store.getPublishedPortsJson('template_chiller_v1'), {
+    ports: [
+      {
+        id: 'chw_in',
+        name: '冷冻回水入口',
+        position: [-1.2, 0, 0],
+        system: 'CHW',
+        direction: 'in',
+      },
+      {
+        id: 'chw_out',
+        name: '冷冻供水出口',
+        position: [1.2, 0, 0],
+        system: 'CHW',
+        direction: 'out',
+      },
+    ],
+  })
+})

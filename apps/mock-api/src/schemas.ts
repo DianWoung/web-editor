@@ -116,8 +116,50 @@ export const assetListItemSchema = z.object({
   bounds: assetBoundsSchema,
   modelUrl: z.string().min(1).nullable(),
   status: assetStatusSchema,
+  topologyTemplateId: z.string().min(1).nullable().optional(),
+  topologyTemplateKey: z.string().min(1).nullable().optional(),
+  topologyTemplateName: z.string().min(1).nullable().optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
+})
+
+export const topologyTemplateConnectorSchema = z.object({
+  id: z.string().min(1),
+  connectorKey: z.string().min(1),
+  name: z.string().min(1),
+  system: z.string().min(1),
+  role: z.string().min(1),
+  medium: z.string().min(1).nullable(),
+  direction: z.string().min(1),
+  required: z.boolean(),
+  sortOrder: z.number().int().nonnegative(),
+  geometry: z.object({
+    anchor: z.tuple([z.number(), z.number(), z.number()]),
+    normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
+  }),
+})
+
+export const topologyTemplateListItemSchema = z.object({
+  id: z.string().min(1),
+  templateKey: z.string().min(1),
+  displayName: z.string().min(1),
+  category: z.string().min(1),
+  description: z.string(),
+  defaultSystem: z.string().min(1),
+  connectorCount: z.number().int().nonnegative(),
+  updatedAt: z.string().min(1),
+})
+
+export const topologyTemplateDetailSchema = topologyTemplateListItemSchema.extend({
+  connectors: z.array(topologyTemplateConnectorSchema),
+})
+
+export const topologyTemplateListSchema = z.object({
+  items: z.array(topologyTemplateListItemSchema),
+})
+
+export const applyTopologyTemplatePayloadSchema = z.object({
+  templateId: z.string().trim().min(1),
 })
 
 export const assetDetailSchema = z.object({
@@ -261,6 +303,8 @@ export type AssetDetail = z.infer<typeof assetDetailSchema>
 export type AssetListItem = z.infer<typeof assetListItemSchema>
 export type AssetUpload = z.infer<typeof assetUploadSchema>
 export type AssetVersion = z.infer<typeof assetVersionSchema>
+export type TopologyTemplateDetail = z.infer<typeof topologyTemplateDetailSchema>
+export type TopologyTemplateListItem = z.infer<typeof topologyTemplateListItemSchema>
 export type RuntimeDevice = z.infer<typeof runtimeDeviceSchema>
 export type RuntimeOverview = z.infer<typeof runtimeOverviewSchema>
 export type RuntimeSnapshot = z.infer<typeof runtimeSnapshotSchema>

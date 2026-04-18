@@ -447,7 +447,8 @@ input {
 .assets-create-grid label,
 .assets-form-grid label,
 .assets-json-editor,
-.assets-file-picker {
+.assets-file-picker,
+.assets-template-picker {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -532,13 +533,63 @@ input {
 .assets-binding-row input,
 .assets-binding-row select,
 .assets-json-editor textarea,
-.assets-file-picker input {
+.assets-file-picker input,
+.assets-template-picker select {
   width: 100%;
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--twin-border);
   background: var(--twin-bg-input);
   color: inherit;
+}
+
+.assets-table--overrides td {
+  white-space: nowrap;
+}
+
+.assets-cell-label {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(143, 163, 184, 0.12);
+  border: 1px solid rgba(143, 163, 184, 0.18);
+}
+
+.assets-template-summary {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(143, 163, 184, 0.14);
+  background: rgba(12, 18, 28, 0.72);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assets-template-summary-header,
+.assets-template-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assets-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(69, 196, 232, 0.12);
+  border: 1px solid rgba(69, 196, 232, 0.18);
+  font-size: 0.82rem;
+}
+
+.assets-checkbox--inline {
+  align-items: center;
+  gap: 8px;
+}
+
+.assets-checkbox--inline input {
+  width: auto;
 }
 
 .assets-binding-row {

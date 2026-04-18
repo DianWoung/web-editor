@@ -9,6 +9,9 @@ const assetPageMocks = vi.hoisted(() => ({
   listAssets: vi.fn(),
   createAssetDraft: vi.fn(),
   getAssetDetail: vi.fn(),
+  listTopologyTemplates: vi.fn(),
+  getTopologyTemplate: vi.fn(),
+  applyTopologyTemplate: vi.fn(),
   updateAsset: vi.fn(),
   replaceAssetPorts: vi.fn(),
   replaceAssetBindings: vi.fn(),
@@ -23,6 +26,9 @@ vi.mock('@/services/api/assetsApi', () => ({
   listAssets: assetPageMocks.listAssets,
   createAssetDraft: assetPageMocks.createAssetDraft,
   getAssetDetail: assetPageMocks.getAssetDetail,
+  listTopologyTemplates: assetPageMocks.listTopologyTemplates,
+  getTopologyTemplate: assetPageMocks.getTopologyTemplate,
+  applyTopologyTemplate: assetPageMocks.applyTopologyTemplate,
   updateAsset: assetPageMocks.updateAsset,
   replaceAssetPorts: assetPageMocks.replaceAssetPorts,
   replaceAssetBindings: assetPageMocks.replaceAssetBindings,
@@ -45,8 +51,24 @@ function makeAsset(id = 'asset-1', status: 'draft' | 'published' | 'archived' = 
     bounds: { halfExtents: [1.2, 1.8, 1.1] as [number, number, number] },
     modelUrl: null,
     status,
+    topologyTemplateId: null,
+    topologyTemplateKey: null,
+    topologyTemplateName: null,
     createdAt: '2026-04-08T10:00:00.000Z',
     updatedAt: '2026-04-08T10:00:00.000Z',
+  }
+}
+
+function makeTemplate() {
+  return {
+    id: 'tpl_chw_supply_return',
+    templateKey: 'chw_supply_return',
+    displayName: '双口 CHW 供回水',
+    category: 'water_loop',
+    description: '适用于标准冷冻水双口设备，包含一个回水入口和一个供水出口。',
+    defaultSystem: 'CHW',
+    connectorCount: 2,
+    updatedAt: '2026-04-18T10:00:00.000Z',
   }
 }
 
@@ -102,8 +124,106 @@ describe('AssetsPage', () => {
     for (const mock of Object.values(assetPageMocks)) {
       mock.mockReset()
     }
+    const templateDetail = {
+      ...makeTemplate(),
+      connectors: [
+        {
+          id: 'tpl-chw-in',
+          connectorKey: 'chw_in',
+          name: '冷冻回水入口',
+          system: 'CHW',
+          role: 'return',
+          medium: 'water',
+          direction: 'in',
+          required: true,
+          sortOrder: 0,
+          geometry: {
+            anchor: [-1.2, 0, 0] as [number, number, number],
+            normal: [-1, 0, 0] as [number, number, number],
+          },
+        },
+        {
+          id: 'tpl-chw-out',
+          connectorKey: 'chw_out',
+          name: '冷冻供水出口',
+          system: 'CHW',
+          role: 'supply',
+          medium: 'water',
+          direction: 'out',
+          required: true,
+          sortOrder: 1,
+          geometry: {
+            anchor: [1.2, 0, 0] as [number, number, number],
+            normal: [1, 0, 0] as [number, number, number],
+          },
+        },
+      ],
+    }
     assetPageMocks.listAssets.mockResolvedValue({ items: [makeAsset()] })
     assetPageMocks.getAssetDetail.mockResolvedValue(makeDetail())
+    assetPageMocks.listTopologyTemplates.mockResolvedValue({ items: [makeTemplate()] })
+    assetPageMocks.getTopologyTemplate.mockResolvedValue(templateDetail)
+    assetPageMocks.applyTopologyTemplate.mockResolvedValue({
+      template: templateDetail,
+      connectors: [
+        {
+          id: 'chw_in',
+          connectorKey: 'chw_in',
+          portKey: 'chw_in',
+          name: '冷冻回水入口',
+          system: 'CHW',
+          role: 'return',
+          medium: 'water',
+          direction: 'in',
+          side: null,
+          groupKey: null,
+          required: true,
+          sortOrder: 0,
+          geometry: {
+            anchor: [-1.2, 0, 0] as [number, number, number],
+            normal: [-1, 0, 0] as [number, number, number],
+          },
+        },
+        {
+          id: 'chw_out',
+          connectorKey: 'chw_out',
+          portKey: 'chw_out',
+          name: '冷冻供水出口',
+          system: 'CHW',
+          role: 'supply',
+          medium: 'water',
+          direction: 'out',
+          side: null,
+          groupKey: null,
+          required: true,
+          sortOrder: 1,
+          geometry: {
+            anchor: [1.2, 0, 0] as [number, number, number],
+            normal: [1, 0, 0] as [number, number, number],
+          },
+        },
+      ],
+      ports: [
+        {
+          id: 'chw_in',
+          portKey: 'chw_in',
+          name: '冷冻回水入口',
+          position: [-1.2, 0, 0] as [number, number, number],
+          system: 'CHW',
+          direction: 'in',
+          sortOrder: 0,
+        },
+        {
+          id: 'chw_out',
+          portKey: 'chw_out',
+          name: '冷冻供水出口',
+          position: [1.2, 0, 0] as [number, number, number],
+          system: 'CHW',
+          direction: 'out',
+          sortOrder: 1,
+        },
+      ],
+    })
     assetPageMocks.listAssetVersions.mockResolvedValue({ items: [] })
     assetPageMocks.createAssetDraft.mockResolvedValue(makeDetail())
     assetPageMocks.updateAsset.mockResolvedValue(makeDetail())
@@ -172,11 +292,19 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.updateAsset.mock.calls[0]?.[1].displayName, 'Heat Pump Updated')
     })
 
-    fireEvent.change(screen.getByLabelText('连接点角色'), { target: { value: 'supply' } })
+    fireEvent.change(screen.getByLabelText('连接拓扑模板'), { target: { value: 'tpl_chw_supply_return' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用模板' }))
+    await waitFor(() => {
+      assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
+    })
+
+    fireEvent.change(screen.getByLabelText('连接点名称 1'), { target: { value: '主机回水口' } })
+    fireEvent.click(screen.getByLabelText('连接点必需 2'))
     fireEvent.click(screen.getByRole('button', { name: '保存连接点' }))
     await waitFor(() => {
-      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1].length, 1)
-      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][0]?.role, 'supply')
+      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1].length, 2)
+      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][0]?.name, '主机回水口')
+      assert.equal(assetPageMocks.replaceAssetPorts.mock.calls[0]?.[1][1]?.required, false)
     })
 
     fireEvent.click(screen.getByRole('button', { name: '保存绑定' }))
@@ -194,7 +322,7 @@ describe('AssetsPage', () => {
       assert.equal(assetPageMocks.archiveAsset.mock.calls[0]?.[0], 'asset-1')
     })
 
-    fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: '删除' }))
     await waitFor(() => {
       assert.equal(assetPageMocks.deleteAsset.mock.calls[0]?.[0], 'asset-1')
     })
@@ -220,7 +348,7 @@ describe('AssetsPage', () => {
     await screen.findByText(/\/api\/assets\/uploads\/upload-1\/model\.glb/)
   })
 
-  it('renders connector semantics and allows switching the selected connector', async () => {
+  it('renders connector overrides with topology fields as read-only values', async () => {
     assetPageMocks.getAssetDetail.mockResolvedValue({
       ...makeDetail(),
       connectors: [
@@ -255,8 +383,36 @@ describe('AssetsPage', () => {
     )
 
     await screen.findByRole('heading', { name: 'Heat Pump' })
-    await screen.findByDisplayValue('return')
-    fireEvent.click(screen.getByRole('button', { name: /出口/ }))
-    await screen.findByDisplayValue('supply')
+    await screen.findByDisplayValue('入口')
+    await screen.findByText('return')
+    await screen.findByText('supply')
+    assert.equal(screen.queryByLabelText('连接点角色'), null)
+    assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
+  })
+
+  it('applies a topology template and only exposes connector name and required as editable overrides', async () => {
+    render(
+      <MemoryRouter initialEntries={['/assets']}>
+        <Routes>
+          <Route path="/assets" element={<AssetsPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('heading', { name: 'Heat Pump' })
+    await screen.findByRole('button', { name: '应用模板' })
+
+    fireEvent.change(screen.getByLabelText('连接拓扑模板'), { target: { value: 'tpl_chw_supply_return' } })
+    fireEvent.click(screen.getByRole('button', { name: '应用模板' }))
+
+    await waitFor(() => {
+      assert.equal(assetPageMocks.applyTopologyTemplate.mock.calls[0]?.[1], 'tpl_chw_supply_return')
+    })
+
+    await screen.findByDisplayValue('冷冻回水入口')
+    await screen.findByText('return')
+    await screen.findByText('supply')
+    assert.equal(screen.queryByLabelText('连接点角色'), null)
+    assert.equal(screen.queryByRole('button', { name: '新增连接点' }), null)
   })
 })

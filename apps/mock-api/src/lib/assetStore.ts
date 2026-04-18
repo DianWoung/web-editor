@@ -11,6 +11,8 @@ import {
   type AssetListItem,
   type AssetUpload,
   type AssetVersion,
+  type TopologyTemplateDetail,
+  type TopologyTemplateListItem,
 } from '../schemas.ts'
 
 type AssetMutationInput = {
@@ -59,6 +61,8 @@ type PersistedAssetRow = {
   bounds_y: number
   bounds_z: number
   model_url: string | null
+  topology_template_id: string | null
+  topology_snapshot_version: string | null
   status: 'draft' | 'published' | 'archived'
   created_at: string
   updated_at: string
@@ -111,6 +115,135 @@ type PersistedUploadRow = {
   created_at: string
 }
 
+type PersistedTopologyTemplateRow = {
+  id: string
+  template_key: string
+  display_name: string
+  category: string
+  description: string
+  default_system: string
+  status: 'active' | 'inactive'
+  created_at: string
+  updated_at: string
+}
+
+type PersistedTopologyTemplateConnectorRow = {
+  id: string
+  template_id: string
+  connector_key: string
+  name: string
+  system: string
+  role: string
+  medium: string | null
+  direction: string
+  required: number
+  position_x: number
+  position_y: number
+  position_z: number
+  normal_x: number | null
+  normal_y: number | null
+  normal_z: number | null
+  sort_order: number
+}
+
+const defaultTopologyTemplates = [
+  {
+    id: 'tpl_chw_supply_return',
+    templateKey: 'chw_supply_return',
+    displayName: '双口 CHW 供回水',
+    category: 'water_loop',
+    description: '适用于标准冷冻水双口设备，包含一个回水入口和一个供水出口。',
+    defaultSystem: 'CHW',
+    connectors: [
+      {
+        id: 'tpl_chw_supply_return_chw_in',
+        connectorKey: 'chw_in',
+        name: '冷冻回水入口',
+        system: 'CHW',
+        role: 'return',
+        medium: 'water',
+        direction: 'in',
+        required: true,
+        sortOrder: 0,
+        geometry: {
+          anchor: [-1.2, 0, 0] as [number, number, number],
+          normal: [-1, 0, 0] as [number, number, number],
+        },
+      },
+      {
+        id: 'tpl_chw_supply_return_chw_out',
+        connectorKey: 'chw_out',
+        name: '冷冻供水出口',
+        system: 'CHW',
+        role: 'supply',
+        medium: 'water',
+        direction: 'out',
+        required: true,
+        sortOrder: 1,
+        geometry: {
+          anchor: [1.2, 0, 0] as [number, number, number],
+          normal: [1, 0, 0] as [number, number, number],
+        },
+      },
+    ],
+  },
+  {
+    id: 'tpl_chw_power_signal',
+    templateKey: 'chw_power_signal',
+    displayName: 'CHW + 电源 + 信号',
+    category: 'hybrid',
+    description: '适用于带冷冻水接口并附加电源和控制信号接口的复合设备。',
+    defaultSystem: 'CHW',
+    connectors: [
+      {
+        id: 'tpl_chw_power_signal_chw_in',
+        connectorKey: 'chw_in',
+        name: '冷冻回水入口',
+        system: 'CHW',
+        role: 'return',
+        medium: 'water',
+        direction: 'in',
+        required: true,
+        sortOrder: 0,
+        geometry: {
+          anchor: [-1.2, 0, 0] as [number, number, number],
+          normal: [-1, 0, 0] as [number, number, number],
+        },
+      },
+      {
+        id: 'tpl_chw_power_signal_chw_out',
+        connectorKey: 'chw_out',
+        name: '冷冻供水出口',
+        system: 'CHW',
+        role: 'supply',
+        medium: 'water',
+        direction: 'out',
+        required: true,
+        sortOrder: 1,
+        geometry: {
+          anchor: [1.2, 0, 0] as [number, number, number],
+          normal: [1, 0, 0] as [number, number, number],
+        },
+      },
+      {
+        id: 'tpl_chw_power_signal_power_in',
+        connectorKey: 'power_in',
+        name: '主电源输入',
+        system: 'ELE',
+        role: 'power_in',
+        medium: 'electric',
+        direction: 'in',
+        required: true,
+        sortOrder: 2,
+        geometry: {
+          anchor: [0, 0.8, 0] as [number, number, number],
+          normal: [0, 1, 0] as [number, number, number],
+        },
+      },
+    ],
+  },
+] as const
+
 function createId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
@@ -128,7 +261,10 @@ function getLegacyModelUrl(dataRoot: string, assetKey: string, declaresModelGlb:
   return existsSync(modelPath) ? `/api/assets/models/${assetKey}` : null
 }
 
-function toAssetListItem(row: PersistedAssetRow): AssetListItem {
+function toAssetListItem(
+  row: PersistedAssetRow,
+  templateSummary?: Pick<TopologyTemplateListItem, 'id' | 'templateKey' | 'displayName'> | null,
+): AssetListItem {
   return {
     id: row.id,
     assetKey: row.asset_key,
@@ -142,6 +278,9 @@ function toAssetListItem(row: PersistedAssetRow): AssetListItem {
     },
     modelUrl: row.model_url,
     status: row.status,
+    topologyTemplateId: templateSummary?.id ?? row.topology_template_id ?? null,
+    topologyTemplateKey: templateSummary?.templateKey ?? null,
+    topologyTemplateName: templateSummary?.displayName ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -206,6 +345,29 @@ function toPortProjection(row: ReturnType<typeof toConnector>) {
   }
 }
 
+function toTopologyTemplateConnector(row: PersistedTopologyTemplateConnectorRow): TopologyTemplateDetail['connectors'][number] {
+  const normal =
+    row.normal_x === null || row.normal_y === null || row.normal_z === null
+      ? null
+      : ([row.normal_x, row.normal_y, row.normal_z] as [number, number, number])
+
+  return {
+    id: row.id,
+    connectorKey: row.connector_key,
+    name: row.name,
+    system: row.system,
+    role: row.role,
+    medium: row.medium,
+    direction: row.direction,
+    required: Boolean(row.required),
+    sortOrder: row.sort_order,
+    geometry: {
+      anchor: [row.position_x, row.position_y, row.position_z] as [number, number, number],
+      normal,
+    },
+  }
+}
+
 export function createAssetStore(dataRoot: string) {
   mkdirSync(dataRoot, { recursive: true })
   const dbPath = path.join(dataRoot, 'asset-center.sqlite')
@@ -227,6 +389,8 @@ export function createAssetStore(dataRoot: string) {
       bounds_z REAL NOT NULL,
       model_url TEXT,
       model_upload_id TEXT,
+      topology_template_id TEXT,
+      topology_snapshot_version TEXT,
       status TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -286,7 +450,44 @@ export function createAssetStore(dataRoot: string) {
       created_at TEXT NOT NULL,
       FOREIGN KEY(asset_id) REFERENCES equipment_assets(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS topology_templates (
+      id TEXT PRIMARY KEY,
+      template_key TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      description TEXT NOT NULL,
+      default_system TEXT NOT NULL,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS topology_template_connectors (
+      id TEXT PRIMARY KEY,
+      template_id TEXT NOT NULL,
+      connector_key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      system TEXT NOT NULL,
+      role TEXT NOT NULL,
+      medium TEXT,
+      direction TEXT NOT NULL,
+      required INTEGER NOT NULL,
+      position_x REAL NOT NULL,
+      position_y REAL NOT NULL,
+      position_z REAL NOT NULL,
+      normal_x REAL,
+      normal_y REAL,
+      normal_z REAL,
+      sort_order INTEGER NOT NULL,
+      FOREIGN KEY(template_id) REFERENCES topology_templates(id) ON DELETE CASCADE
+    );
   `)
+
+  ensureTableColumns(db, 'equipment_assets', [
+    { name: 'topology_template_id', definition: 'TEXT' },
+    { name: 'topology_snapshot_version', definition: 'TEXT' },
+  ])
 
   ensureTableColumns(db, 'equipment_ports', [
     { name: 'role', definition: 'TEXT' },
@@ -337,6 +538,64 @@ export function createAssetStore(dataRoot: string) {
     return row
   }
 
+  function listTopologyTemplateRows() {
+    return db
+      .prepare("SELECT * FROM topology_templates WHERE status = 'active' ORDER BY updated_at DESC, display_name ASC")
+      .all() as PersistedTopologyTemplateRow[]
+  }
+
+  function getTopologyTemplateRow(templateId: string) {
+    const row = db
+      .prepare("SELECT * FROM topology_templates WHERE id = ? AND status = 'active'")
+      .get(templateId) as PersistedTopologyTemplateRow | undefined
+    if (!row) {
+      throw new HttpError(404, `连接拓扑模板不存在：${templateId}`)
+    }
+    return row
+  }
+
+  function listTopologyTemplateConnectors(templateId: string) {
+    const rows = db
+      .prepare('SELECT * FROM topology_template_connectors WHERE template_id = ? ORDER BY sort_order ASC, id ASC')
+      .all(templateId) as PersistedTopologyTemplateConnectorRow[]
+    return rows.map(toTopologyTemplateConnector)
+  }
+
+  function toTopologyTemplateListItem(row: PersistedTopologyTemplateRow): TopologyTemplateListItem {
+    const connectorCount = (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM topology_template_connectors WHERE template_id = ?')
+        .get(row.id) as { count: number }
+    ).count
+
+    return {
+      id: row.id,
+      templateKey: row.template_key,
+      displayName: row.display_name,
+      category: row.category,
+      description: row.description,
+      defaultSystem: row.default_system,
+      connectorCount,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  function getTopologyTemplateSummary(templateId: string | null) {
+    if (!templateId) {
+      return null
+    }
+    const row = db.prepare('SELECT * FROM topology_templates WHERE id = ?').get(templateId) as PersistedTopologyTemplateRow | undefined
+    return row ? toTopologyTemplateListItem(row) : null
+  }
+
+  function getTopologyTemplateDetail(templateId: string): TopologyTemplateDetail {
+    const row = getTopologyTemplateRow(templateId)
+    return {
+      ...toTopologyTemplateListItem(row),
+      connectors: listTopologyTemplateConnectors(templateId),
+    }
+  }
+
   function listConnectors(assetId: string) {
     const rows = db
       .prepare('SELECT * FROM equipment_ports WHERE asset_id = ? ORDER BY sort_order ASC, id ASC')
@@ -378,7 +637,8 @@ export function createAssetStore(dataRoot: string) {
   }
 
   function getAssetDetail(assetId: string): AssetDetail {
-    const asset = toAssetListItem(getAssetRow(assetId))
+    const assetRow = getAssetRow(assetId)
+    const asset = toAssetListItem(assetRow, getTopologyTemplateSummary(assetRow.topology_template_id))
     const connectors = listConnectors(assetId)
     return {
       asset,
@@ -386,6 +646,62 @@ export function createAssetStore(dataRoot: string) {
       ports: connectors.map(toPortProjection),
       bindings: listBindings(assetId),
     }
+  }
+
+  function seedTopologyTemplatesIfNeeded() {
+    const count = (db.prepare('SELECT COUNT(*) AS count FROM topology_templates').get() as { count: number }).count
+    if (count > 0) {
+      return
+    }
+
+    const insertTemplate = db.prepare(`
+      INSERT INTO topology_templates (
+        id, template_key, display_name, category, description, default_system, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    const insertConnector = db.prepare(`
+      INSERT INTO topology_template_connectors (
+        id, template_id, connector_key, name, system, role, medium, direction, required,
+        position_x, position_y, position_z, normal_x, normal_y, normal_z, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    const now = new Date().toISOString()
+
+    transaction(() => {
+      for (const template of defaultTopologyTemplates) {
+        insertTemplate.run(
+          template.id,
+          template.templateKey,
+          template.displayName,
+          template.category,
+          template.description,
+          template.defaultSystem,
+          'active',
+          now,
+          now,
+        )
+        for (const connector of template.connectors) {
+          insertConnector.run(
+            connector.id,
+            template.id,
+            connector.connectorKey,
+            connector.name,
+            connector.system,
+            connector.role,
+            connector.medium,
+            connector.direction,
+            connector.required ? 1 : 0,
+            connector.geometry.anchor[0],
+            connector.geometry.anchor[1],
+            connector.geometry.anchor[2],
+            connector.geometry.normal?.[0] ?? null,
+            connector.geometry.normal?.[1] ?? null,
+            connector.geometry.normal?.[2] ?? null,
+            connector.sortOrder,
+          )
+        }
+      }
+    })
   }
 
   function syncLegacyEquipmentIfNeeded() {
@@ -398,8 +714,8 @@ export function createAssetStore(dataRoot: string) {
     const insertAsset = db.prepare(`
       INSERT INTO equipment_assets (
         id, asset_key, display_name, type, default_system, asset_version, render_style,
-        bounds_x, bounds_y, bounds_z, model_url, model_upload_id, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        bounds_x, bounds_y, bounds_z, model_url, model_upload_id, topology_template_id, topology_snapshot_version, status, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     const insertPort = db.prepare(`
       INSERT INTO equipment_ports (
@@ -446,6 +762,8 @@ export function createAssetStore(dataRoot: string) {
           asset.bounds.halfExtents[2],
           legacyModelUrl,
           null,
+          null,
+          null,
           'published',
           now,
           now,
@@ -475,13 +793,14 @@ export function createAssetStore(dataRoot: string) {
     })
   }
 
+  seedTopologyTemplatesIfNeeded()
   syncLegacyEquipmentIfNeeded()
 
   const insertAssetStmt = db.prepare(`
     INSERT INTO equipment_assets (
       id, asset_key, display_name, type, default_system, asset_version, render_style,
-      bounds_x, bounds_y, bounds_z, model_url, model_upload_id, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      bounds_x, bounds_y, bounds_z, model_url, model_upload_id, topology_template_id, topology_snapshot_version, status, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const updateAssetStmt = db.prepare(`
     UPDATE equipment_assets
@@ -512,15 +831,28 @@ export function createAssetStore(dataRoot: string) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const attachUploadStmt = db.prepare('UPDATE equipment_uploads SET asset_id = ? WHERE id = ?')
+  const applyTopologyTemplateStmt = db.prepare(`
+    UPDATE equipment_assets
+    SET topology_template_id = ?, topology_snapshot_version = ?, updated_at = ?
+    WHERE id = ?
+  `)
 
   return {
+    listTopologyTemplates() {
+      return { items: listTopologyTemplateRows().map(toTopologyTemplateListItem) }
+    },
+
+    getTopologyTemplate(templateId: string) {
+      return getTopologyTemplateDetail(templateId)
+    },
+
     listAssets(status?: 'draft' | 'published' | 'archived' | 'all') {
       const rows = (
         status && status !== 'all'
           ? db.prepare('SELECT * FROM equipment_assets WHERE status = ? ORDER BY updated_at DESC').all(status)
           : db.prepare('SELECT * FROM equipment_assets ORDER BY updated_at DESC').all()
       ) as PersistedAssetRow[]
-      return { items: rows.map(toAssetListItem) }
+      return { items: rows.map((row) => toAssetListItem(row, getTopologyTemplateSummary(row.topology_template_id))) }
     },
 
     createAssetDraft(input: AssetMutationInput) {
@@ -546,6 +878,8 @@ export function createAssetStore(dataRoot: string) {
         input.bounds.halfExtents[2],
         upload?.public_url ?? null,
         upload?.id ?? null,
+        null,
+        null,
         'draft',
         now,
         now,
@@ -590,6 +924,44 @@ export function createAssetStore(dataRoot: string) {
         attachUploadStmt.run(assetId, upload.id)
       }
       return getAssetDetail(assetId)
+    },
+
+    applyTopologyTemplate(assetId: string, templateId: string) {
+      getAssetRow(assetId)
+      const template = getTopologyTemplateDetail(templateId)
+      const snapshotVersion = `${template.updatedAt}:${template.id}`
+      const updatedAt = new Date().toISOString()
+      transaction(() => {
+        replacePortsDeleteStmt.run(assetId)
+        for (const connector of template.connectors) {
+          replacePortsInsertStmt.run(
+            assetId,
+            connector.connectorKey,
+            connector.name,
+            connector.geometry.anchor[0],
+            connector.geometry.anchor[1],
+            connector.geometry.anchor[2],
+            connector.system,
+            connector.direction,
+            connector.role,
+            connector.medium ?? null,
+            null,
+            null,
+            connector.required ? 1 : 0,
+            connector.geometry.normal?.[0] ?? null,
+            connector.geometry.normal?.[1] ?? null,
+            connector.geometry.normal?.[2] ?? null,
+            connector.sortOrder,
+          )
+        }
+        applyTopologyTemplateStmt.run(template.id, snapshotVersion, updatedAt, assetId)
+      })
+
+      return {
+        template,
+        connectors: listConnectors(assetId),
+        ports: listPorts(assetId),
+      }
     },
 
     replaceAssetPorts(assetId: string, ports: AssetPortInput[]) {

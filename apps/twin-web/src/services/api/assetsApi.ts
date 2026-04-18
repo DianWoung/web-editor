@@ -1,5 +1,6 @@
 import { apiRequest } from '@/services/api/client'
 import {
+  applyTopologyTemplateResponseSchema,
   assetBindingsResponseSchema,
   assetDetailSchema,
   assetListSchema,
@@ -8,6 +9,8 @@ import {
   assetUploadResponseSchema,
   assetVersionsSchema,
   type AssetMutationInput,
+  topologyTemplateDetailSchema,
+  topologyTemplateListSchema,
 } from '@/schemas/assets'
 
 export async function listAssets(status: 'draft' | 'published' | 'archived' | 'all' = 'all') {
@@ -25,11 +28,30 @@ export async function getAssetDetail(assetId: string) {
   return assetDetailSchema.parse(await apiRequest<unknown>(`/assets/${encodeURIComponent(assetId)}`))
 }
 
+export async function listTopologyTemplates() {
+  return topologyTemplateListSchema.parse(await apiRequest<unknown>('/assets/topology-templates'))
+}
+
+export async function getTopologyTemplate(templateId: string) {
+  return topologyTemplateDetailSchema.parse(
+    await apiRequest<unknown>(`/assets/topology-templates/${encodeURIComponent(templateId)}`),
+  )
+}
+
 export async function updateAsset(assetId: string, input: AssetMutationInput) {
   return assetDetailSchema.parse(
     await apiRequest<unknown>(`/assets/${encodeURIComponent(assetId)}`, {
       method: 'PUT',
       body: JSON.stringify(assetMutationSchema.parse(input)),
+    }),
+  )
+}
+
+export async function applyTopologyTemplate(assetId: string, templateId: string) {
+  return applyTopologyTemplateResponseSchema.parse(
+    await apiRequest<unknown>(`/assets/${encodeURIComponent(assetId)}/apply-topology-template`, {
+      method: 'POST',
+      body: JSON.stringify({ templateId }),
     }),
   )
 }
