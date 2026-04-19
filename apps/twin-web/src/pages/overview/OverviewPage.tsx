@@ -68,7 +68,11 @@ export function OverviewPage() {
     let active = true
     if (!sceneId) return
     void listNamedScenes().then((result) => {
-      if (!active || !result.ok) return
+      if (!active) return
+      if (!result.ok) {
+        setSceneMeta(null)
+        return
+      }
       setSceneMeta(result.data.items.find((item) => item.id === sceneId) ?? null)
     })
     return () => {
@@ -76,7 +80,7 @@ export function OverviewPage() {
     }
   }, [sceneId])
 
-  const currentSceneMeta = sceneId ? sceneMeta : null
+  const currentSceneMeta = sceneId && sceneMeta?.id === sceneId ? sceneMeta : null
 
   useRuntimePolling(async () => {
     await fetchOverview()
