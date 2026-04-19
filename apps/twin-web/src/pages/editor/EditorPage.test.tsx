@@ -89,7 +89,7 @@ describe('EditorPage', () => {
     cleanup()
   })
 
-  it('loads named scene metadata into a simplified editor header', async () => {
+  it('loads named scene metadata into the shared scene workspace header', async () => {
     render(
       <MemoryRouter initialEntries={['/editor?sceneId=scene-day']}>
         <Routes>
@@ -102,11 +102,12 @@ describe('EditorPage', () => {
       assert.equal(editorPageMocks.loadNamedSceneIntoStore.mock.calls[0]?.[0], 'scene-day')
     })
     assert.equal(editorPageMocks.loadCurrentSceneIntoStore.mock.calls.length, 0)
+    await screen.findByText('场景工作区')
     await screen.findByDisplayValue('白天工况')
     await screen.findByDisplayValue('默认备注')
     await screen.findByRole('button', { name: '保存' })
     await screen.findByRole('button', { name: '撤销' })
-    await screen.findByRole('link', { name: '返回场景管理' })
+    await screen.findByRole('link', { name: '返回场景工作台' })
     assert.equal(screen.queryByText('SceneJsonToolbar'), null)
   })
 })

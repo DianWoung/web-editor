@@ -80,6 +80,8 @@ export function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all')
   const [items, setItems] = useState<Awaited<ReturnType<typeof listAssets>>['items']>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [createDraft, setCreateDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [assetDraft, setAssetDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [connectorsDraft, setConnectorsDraft] = useState<AssetConnector[]>([])
   const [selectedConnectorKey, setSelectedConnectorKey] = useState<string | null>(null)
@@ -206,8 +208,10 @@ export function AssetsPage() {
   const handleCreate = async () => {
     setSaving(true)
     try {
-      const created = await createAssetDraft(assetDraft)
+      const created = await createAssetDraft(createDraft)
       setMessage(`已创建资产草稿：${created.asset.displayName}`)
+      setCreateDraft(createEmptyDraft())
+      setCreateDialogOpen(false)
       await refreshList(created.asset.id)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
@@ -383,23 +387,17 @@ export function AssetsPage() {
     <div className="assets-page">
       <aside className="assets-sidebar">
         <section className="assets-panel">
-          <h1>资产管理</h1>
-          <p className="muted small">统一维护模型文件、资产配置、端口和绑定占位，再发布到设备库。</p>
-          <div className="assets-create-grid">
-            <label>
-              <span>新资产标识</span>
-              <input value={assetDraft.assetKey} onChange={(e) => setAssetDraft({ ...assetDraft, assetKey: e.target.value })} />
-            </label>
-            <label>
-              <span>新资产名称</span>
-              <input
-                value={assetDraft.displayName}
-                onChange={(e) => setAssetDraft({ ...assetDraft, displayName: e.target.value })}
-              />
-            </label>
-          </div>
-          <button type="button" className="primary" onClick={handleCreate} disabled={saving}>
-            新建资产草稿
+          <h1>资产配置中心</h1>
+          <p className="muted small">从场景工作台进入，用于维护模型文件、资产配置、连接点和绑定占位，再发布到设备库。</p>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => {
+              setCreateDraft(createEmptyDraft())
+              setCreateDialogOpen(true)
+            }}
+          >
+            新增资产
           </button>
         </section>
         <AssetList
@@ -520,6 +518,41 @@ export function AssetsPage() {
         {message ? <section className="assets-panel assets-panel--notice"><p>{message}</p></section> : null}
         {error ? <section className="assets-panel assets-panel--error"><p>{error}</p></section> : null}
       </main>
+
+      {createDialogOpen ? (
+        <div className="scene-delete-backdrop" role="presentation">
+          <section className="scene-delete-dialog assets-create-dialog" role="dialog" aria-modal="true" aria-labelledby="asset-create-title">
+            <h2 id="asset-create-title">新增资产</h2>
+            <p className="muted small">先创建草稿，再补模型、连接点和绑定配置。</p>
+            <div className="assets-create-grid">
+              <label>
+                <span>新资产标识</span>
+                <input
+                  aria-label="新资产标识"
+                  value={createDraft.assetKey}
+                  onChange={(e) => setCreateDraft({ ...createDraft, assetKey: e.target.value })}
+                />
+              </label>
+              <label>
+                <span>新资产名称</span>
+                <input
+                  aria-label="新资产名称"
+                  value={createDraft.displayName}
+                  onChange={(e) => setCreateDraft({ ...createDraft, displayName: e.target.value })}
+                />
+              </label>
+            </div>
+            <div className="scenes-actions">
+              <button type="button" className="secondary" onClick={() => setCreateDialogOpen(false)}>
+                取消
+              </button>
+              <button type="button" className="primary" onClick={handleCreate} disabled={saving}>
+                新建资产草稿
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   )
 }

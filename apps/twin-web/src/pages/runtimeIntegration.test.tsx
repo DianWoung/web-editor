@@ -89,10 +89,13 @@ describe('runtime page integration', () => {
       </MemoryRouter>,
     )
 
+    await screen.findByText('当前场景运行态')
     await screen.findByText('512.4 kW')
     await screen.findByText('5.23')
     await screen.findByText('2')
     await screen.findByText('运行态更新时间：2026-04-02T00:00:00.000Z')
+    await screen.findByRole('link', { name: '返回场景工作台' })
+    await screen.findByRole('button', { name: '重置视角' })
   })
 
   it('detail page renders backend runtime details and retains strategy copy', async () => {

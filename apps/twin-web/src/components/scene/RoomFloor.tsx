@@ -5,11 +5,12 @@ import { sceneTheme } from '@/theme/sceneTheme'
 
 type Props = {
   showGrid?: boolean
+  showPlane?: boolean
   /** 地面点击（编排页「地面放置」模式） */
   onFloorClick?: (point: [number, number, number]) => void
 }
 
-export function RoomFloor({ showGrid = true, onFloorClick }: Props) {
+export function RoomFloor({ showGrid = true, showPlane = true, onFloorClick }: Props) {
   const gridConfig = useMemo(
     () => ({
       cellSize: 1,
@@ -34,21 +35,23 @@ export function RoomFloor({ showGrid = true, onFloorClick }: Props) {
   return (
     <>
       {showGrid ? <Grid position={[0, 0, 0]} {...gridConfig} /> : null}
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-        position={[0, -0.001, 0]}
-        onClick={onFloorClick ? handlePlaneClick : undefined}
-      >
-        <planeGeometry args={[200, 200]} />
-        <meshStandardMaterial
-          color={sceneTheme.floorColor}
-          roughness={0.8}
-          metalness={0.07}
-          emissive={sceneTheme.floorEmissive}
-          emissiveIntensity={sceneTheme.floorEmissiveIntensity}
-        />
-      </mesh>
+      {showPlane ? (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          receiveShadow
+          position={[0, -0.001, 0]}
+          onClick={onFloorClick ? handlePlaneClick : undefined}
+        >
+          <planeGeometry args={[200, 200]} />
+          <meshStandardMaterial
+            color={sceneTheme.floorColor}
+            roughness={0.8}
+            metalness={0.07}
+            emissive={sceneTheme.floorEmissive}
+            emissiveIntensity={sceneTheme.floorEmissiveIntensity}
+          />
+        </mesh>
+      ) : null}
     </>
   )
 }

@@ -29,7 +29,7 @@ describe('ScenesPage', () => {
     cleanup()
   })
 
-  it('renders scenes in a single compact card list', async () => {
+  it('renders scenes as a scene operations workbench with runtime summary and secondary asset entry', async () => {
     scenesPageMocks.listNamedScenes.mockResolvedValue({
       ok: true,
       data: {
@@ -55,16 +55,17 @@ describe('ScenesPage', () => {
       </MemoryRouter>,
     )
 
-    await screen.findByRole('heading', { name: '场景' })
+    await screen.findByRole('heading', { name: '场景运营中台' })
     await screen.findByRole('button', { name: '新增场景' })
-    await screen.findByText('白天工况')
+    await screen.findAllByText('白天工况')
     await screen.findByRole('link', { name: '总览' })
     await screen.findByRole('link', { name: '预览' })
-    await screen.findByText('白天冷站运行')
+    await screen.findAllByText('白天冷站运行')
     await screen.findByText('2 台设备')
     await screen.findByText('1 条管线')
-    assert.equal(screen.queryByRole('heading', { name: '状态' }), null)
-    assert.equal(screen.queryByRole('button', { name: '刷新列表' }), null)
+    await screen.findByRole('heading', { name: '当前场景实时摘要' })
+    await screen.findByText('在线设备')
+    await screen.findByText('业务指标')
   }, 10000)
 
   it('creates a new scene with remark and exposes edit entry', async () => {
@@ -141,8 +142,8 @@ describe('ScenesPage', () => {
       </MemoryRouter>,
     )
 
-    await screen.findByRole('heading', { name: '待删除场景' })
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
+    await screen.findAllByText('待删除场景')
+    fireEvent.click(screen.getAllByRole('button', { name: '删除' })[0]!)
     await screen.findByText(/删除后不可恢复/)
     fireEvent.click(screen.getByRole('button', { name: '确认删除' }))
 

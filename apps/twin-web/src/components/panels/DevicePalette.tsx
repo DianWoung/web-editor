@@ -16,9 +16,9 @@ export function DevicePalette({ catalog, loadError, pendingPlacement, onSetPendi
     <aside className="panel palette">
       <h2>设备库</h2>
       <div className="palette-import">
-        <p className="muted small">设备库只显示已发布资产。新增模型和端口配置请前往资产管理。</p>
+        <p className="muted small">设备库只显示已发布资产。新增模型和连接点配置请前往配置入口。</p>
         <Link className="secondary scene-link-button" to="/assets">
-          打开资产管理
+          打开配置入口
         </Link>
       </div>
       {pendingPlacement ? (

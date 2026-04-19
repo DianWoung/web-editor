@@ -29,6 +29,7 @@ type Props = {
   /** editor：编排交互；viewer：总览只读，点击进详情 */
   mode?: 'editor' | 'viewer'
   onOpenDevice?: (deviceId: string) => void
+  showLabelOverride?: boolean
 }
 
 export function DeviceInstance({
@@ -39,6 +40,7 @@ export function DeviceInstance({
   flowEnabled = false,
   mode = 'editor',
   onOpenDevice,
+  showLabelOverride,
 }: Props) {
   const groupRef = useRef<Group>(null)
   const modelVisualRef = useRef<Group>(null)
@@ -140,7 +142,7 @@ export function DeviceInstance({
 
   const [hx, hy, hz] = device.boundsHalfExtents
   /** 性能兜底：编辑态只对“当前选中设备”显示名称，避免大量 `Text/Billboard` 成为开销。 */
-  const showLabel = mode === 'viewer' ? true : isDeviceSelected
+  const showLabel = showLabelOverride ?? (mode === 'viewer' ? true : isDeviceSelected)
 
   const [modelTopLocal, setModelTopLocal] = useState<[number, number, number]>([0, hy, 0])
 
