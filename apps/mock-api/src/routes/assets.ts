@@ -9,10 +9,12 @@ import { HttpError } from '../lib/httpErrors.ts'
 import { resolveLegacyModelPath } from '../lib/legacyModelPath.ts'
 import { createStorageAdapter } from '../lib/storageAdapter.ts'
 import {
+  applyTopologyTemplatePayloadSchema,
   assetBindingsPayloadSchema,
   assetMutationSchema,
   assetPortsPayloadSchema,
   assetStatusSchema,
+  topologyTemplateMutationSchema,
 } from '../schemas.ts'
 
 function formatZodError(error: ZodError) {
@@ -91,6 +93,50 @@ export function createAssetsRouter(dataRoot: string, assetStore: AssetStore) {
     }
   })
 
+  router.get('/topology-templates', (req, res, next) => {
+    try {
+      res.json(assetStore.listTopologyTemplates())
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.get('/topology-templates/:templateId', (req, res, next) => {
+    try {
+      res.json(assetStore.getTopologyTemplate(req.params.templateId))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/topology-templates', (req, res, next) => {
+    const parsed = topologyTemplateMutationSchema.safeParse(req.body)
+    if (!parsed.success) {
+      next(new HttpError(400, `模板校验失败：${formatZodError(parsed.error)}`))
+      return
+    }
+
+    try {
+      res.status(201).json(assetStore.createTopologyTemplate(parsed.data))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/topology-templates/:templateId', (req, res, next) => {
+    const parsed = topologyTemplateMutationSchema.safeParse(req.body)
+    if (!parsed.success) {
+      next(new HttpError(400, `模板校验失败：${formatZodError(parsed.error)}`))
+      return
+    }
+
+    try {
+      res.json(assetStore.updateTopologyTemplate(req.params.templateId, parsed.data))
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.get('/:assetId', (req, res, next) => {
     try {
       res.json(assetStore.getAsset(req.params.assetId))
@@ -108,6 +154,20 @@ export function createAssetsRouter(dataRoot: string, assetStore: AssetStore) {
 
     try {
       res.json(assetStore.updateAsset(req.params.assetId, parsed.data))
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.post('/:assetId/apply-topology-template', (req, res, next) => {
+    const parsed = applyTopologyTemplatePayloadSchema.safeParse(req.body)
+    if (!parsed.success) {
+      next(new HttpError(400, `模板套用校验失败：${formatZodError(parsed.error)}`))
+      return
+    }
+
+    try {
+      res.json(assetStore.applyTopologyTemplate(req.params.assetId, parsed.data.templateId))
     } catch (error) {
       next(error)
     }

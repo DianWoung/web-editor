@@ -1,24 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { AssetBindingsEditor } from '@/components/assets/AssetBindingsEditor'
+import { AssetConnectorProgressCard } from '@/components/assets/AssetConnectorProgressCard'
 import { AssetForm } from '@/components/assets/AssetForm'
 import { AssetList } from '@/components/assets/AssetList'
 import { AssetUploadPanel } from '@/components/assets/AssetUploadPanel'
-import { ConnectorDetailForm } from '@/components/assets/ConnectorDetailForm'
-import { ConnectorList } from '@/components/assets/ConnectorList'
-import type { AssetBinding, AssetConnector, AssetMutationInput, AssetUpload } from '@/schemas/assets'
+import { TopologyTemplatePicker } from '@/components/assets/TopologyTemplatePicker'
+import { summarizeConnectorProgress } from '@/components/assets/assetConnectorProgress'
+import type {
+  AssetBinding,
+  AssetConnector,
+  AssetMutationInput,
+  AssetUpload,
+  TopologyTemplateDetail,
+} from '@/schemas/assets'
 import {
+  applyTopologyTemplate,
+  archiveAsset,
   createAssetDraft,
   deleteAsset,
   getAssetDetail,
+  getTopologyTemplate,
   listAssets,
   listAssetVersions,
+  listTopologyTemplates,
   publishAsset,
   replaceAssetBindings,
-  replaceAssetPorts,
   updateAsset,
   uploadAssetModel,
-  archiveAsset,
 } from '@/services/api/assetsApi'
 
 function createEmptyDraft(): AssetMutationInput {
@@ -34,63 +43,43 @@ function createEmptyDraft(): AssetMutationInput {
   }
 }
 
-function createEmptyConnector(): AssetConnector {
-  const connectorKey = `connector_${Math.random().toString(36).slice(2, 6)}`
-  return {
-    id: connectorKey,
-    connectorKey,
-    portKey: connectorKey,
-    name: '新连接点',
-    system: 'CHW',
+function portsToFallbackConnectors(detail: Awaited<ReturnType<typeof getAssetDetail>>): AssetConnector[] {
+  return detail.ports.map((port, index) => ({
+    id: port.id,
+    connectorKey: port.portKey,
+    portKey: port.portKey,
+    name: port.name,
+    system: port.system,
     role: 'generic',
-    medium: 'water',
-    direction: 'in',
+    medium: null,
+    direction: port.direction,
     side: null,
     groupKey: null,
     required: false,
-    sortOrder: 0,
+    sortOrder: index,
     geometry: {
-      anchor: [0, 0, 0],
-      normal: [0, 0, 1],
+      anchor: port.position,
+      normal: null,
     },
-  }
-}
-
-function connectorsToJson(connectors: AssetConnector[]) {
-  return JSON.stringify(
-    connectors.map((connector) => ({
-      portKey: connector.portKey,
-      name: connector.name,
-      position: connector.geometry.anchor,
-      system: connector.system,
-      direction: connector.direction,
-      role: connector.role,
-      medium: connector.medium,
-      side: connector.side,
-      groupKey: connector.groupKey,
-      required: connector.required,
-      normal: connector.geometry.normal ?? null,
-    })),
-    null,
-    2,
-  )
+  }))
 }
 
 export function AssetsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'archived'>('all')
   const [items, setItems] = useState<Awaited<ReturnType<typeof listAssets>>['items']>([])
+  const [topologyTemplates, setTopologyTemplates] = useState<Awaited<ReturnType<typeof listTopologyTemplates>>['items']>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [createDraft, setCreateDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [assetDraft, setAssetDraft] = useState<AssetMutationInput>(createEmptyDraft())
   const [connectorsDraft, setConnectorsDraft] = useState<AssetConnector[]>([])
-  const [selectedConnectorKey, setSelectedConnectorKey] = useState<string | null>(null)
-  const [portsMode, setPortsMode] = useState<'table' | 'json'>('table')
-  const [portsJson, setPortsJson] = useState('[]')
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<TopologyTemplateDetail | null>(null)
   const [bindingsDraft, setBindingsDraft] = useState<Array<Omit<AssetBinding, 'id'>>>([])
   const [modelUpload, setModelUpload] = useState<AssetUpload | null>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [loadingList, setLoadingList] = useState(false)
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -103,107 +92,122 @@ export function AssetsPage() {
     [items, selectedAssetId],
   )
 
-  const refreshList = useCallback(async (preferredAssetId?: string | null) => {
-    setLoadingList(true)
+  const connectorProgress = useMemo(() => summarizeConnectorProgress(connectorsDraft), [connectorsDraft])
+
+  const refreshList = useCallback(
+    async (preferredAssetId?: string | null) => {
+      setLoadingList(true)
+      try {
+        const result = await listAssets(statusFilter)
+        setItems(result.items)
+        setSelectedAssetId((current) => {
+          if (preferredAssetId !== undefined) {
+            return preferredAssetId
+          }
+          if (current && result.items.some((item) => item.id === current)) {
+            return current
+          }
+          return result.items[0]?.id ?? null
+        })
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setLoadingList(false)
+      }
+    },
+    [statusFilter],
+  )
+
+  const refreshTopologyTemplates = useCallback(async () => {
+    setLoadingTemplates(true)
     try {
-      const result = await listAssets(statusFilter)
-      setItems(result.items)
-      setSelectedAssetId((current) => {
-        if (preferredAssetId) return preferredAssetId
-        if (current && result.items.some((item) => item.id === current)) return current
-        return result.items[0]?.id ?? null
-      })
+      const result = await listTopologyTemplates()
+      setTopologyTemplates(result.items)
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
-      setLoadingList(false)
+      setLoadingTemplates(false)
     }
-  }, [statusFilter])
+  }, [])
+
+  const loadAssetDetail = useCallback(async (assetId: string) => {
+    setLoadingDetail(true)
+    try {
+      const detail = await getAssetDetail(assetId)
+      setAssetDraft({
+        assetKey: detail.asset.assetKey,
+        displayName: detail.asset.displayName,
+        type: detail.asset.type,
+        defaultSystem: detail.asset.defaultSystem,
+        assetVersion: detail.asset.assetVersion,
+        renderStyle: detail.asset.renderStyle,
+        bounds: detail.asset.bounds,
+        modelUploadId: null,
+      })
+      setConnectorsDraft(detail.connectors.length > 0 ? detail.connectors : portsToFallbackConnectors(detail))
+      setBindingsDraft(
+        detail.bindings.map((binding) => ({
+          bindingType: binding.bindingType,
+          bindingKey: binding.bindingKey,
+          bindingValue: binding.bindingValue,
+          note: binding.note,
+        })),
+      )
+      setSelectedTemplateId(detail.asset.topologyTemplateId ?? '')
+      if (detail.asset.topologyTemplateId) {
+        const template = await getTopologyTemplate(detail.asset.topologyTemplateId)
+        setSelectedTemplateDetail(template)
+      } else {
+        setSelectedTemplateDetail(null)
+      }
+      if (detail.asset.modelUrl) {
+        setModelUpload({
+          id: 'attached',
+          fileName: detail.asset.modelUrl.split('/').pop() || 'model.glb',
+          storageKey: detail.asset.modelUrl,
+          publicUrl: detail.asset.modelUrl,
+          mimeType: 'model/gltf-binary',
+          sizeBytes: 0,
+          uploadStatus: 'uploaded',
+          createdAt: detail.asset.updatedAt,
+        })
+      } else {
+        setModelUpload(null)
+      }
+      const versions = await listAssetVersions(assetId)
+      setVersionsCount(versions.items.length)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoadingDetail(false)
+    }
+  }, [])
 
   useEffect(() => {
     void refreshList()
   }, [refreshList])
 
   useEffect(() => {
+    void refreshTopologyTemplates()
+  }, [refreshTopologyTemplates])
+
+  useEffect(() => {
     if (!selectedAssetId) {
       setAssetDraft(createEmptyDraft())
       setConnectorsDraft([])
-      setSelectedConnectorKey(null)
-      setPortsJson('[]')
+      setSelectedTemplateId('')
+      setSelectedTemplateDetail(null)
       setBindingsDraft([])
       setModelUpload(null)
       setVersionsCount(0)
       return
     }
-    setLoadingDetail(true)
-    void getAssetDetail(selectedAssetId)
-      .then(async (detail) => {
-        setAssetDraft({
-          assetKey: detail.asset.assetKey,
-          displayName: detail.asset.displayName,
-          type: detail.asset.type,
-          defaultSystem: detail.asset.defaultSystem,
-          assetVersion: detail.asset.assetVersion,
-          renderStyle: detail.asset.renderStyle,
-          bounds: detail.asset.bounds,
-          modelUploadId: null,
-        })
-        const nextConnectors =
-          detail.connectors.length > 0
-            ? detail.connectors
-            : detail.ports.map((port, index) => ({
-                id: port.id,
-                connectorKey: port.portKey,
-                portKey: port.portKey,
-                name: port.name,
-                system: port.system,
-                role: 'generic',
-                medium: null,
-                direction: port.direction,
-                side: null,
-                groupKey: null,
-                required: false,
-                sortOrder: index,
-                geometry: {
-                  anchor: port.position,
-                  normal: null,
-                },
-              }))
-        setConnectorsDraft(nextConnectors)
-        setSelectedConnectorKey(nextConnectors[0]?.connectorKey ?? null)
-        setPortsJson(connectorsToJson(nextConnectors))
-        setBindingsDraft(
-          detail.bindings.map((binding) => ({
-            bindingType: binding.bindingType,
-            bindingKey: binding.bindingKey,
-            bindingValue: binding.bindingValue,
-            note: binding.note,
-          })),
-        )
-        if (detail.asset.modelUrl) {
-          setModelUpload({
-            id: 'attached',
-            fileName: detail.asset.modelUrl.split('/').pop() || 'model.glb',
-            storageKey: detail.asset.modelUrl,
-            publicUrl: detail.asset.modelUrl,
-            mimeType: 'model/gltf-binary',
-            sizeBytes: 0,
-            uploadStatus: 'uploaded',
-            createdAt: detail.asset.updatedAt,
-          })
-        } else {
-          setModelUpload(null)
-        }
-        const versions = await listAssetVersions(selectedAssetId)
-        setVersionsCount(versions.items.length)
-        setError(null)
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err.message : String(err))
-      })
-      .finally(() => setLoadingDetail(false))
-  }, [selectedAssetId])
+
+    void loadAssetDetail(selectedAssetId)
+  }, [loadAssetDetail, selectedAssetId])
 
   const handleCreate = async () => {
     setSaving(true)
@@ -247,47 +251,26 @@ export function AssetsPage() {
     }
   }
 
-  const handleSavePorts = async () => {
-    if (!selectedAssetId) return
+  const handleApplyTemplate = async () => {
+    if (!selectedAssetId || !selectedTemplateId) return
     setSaving(true)
     try {
-      const nextPorts =
-        portsMode === 'table'
-          ? connectorsDraft.map((connector) => ({
-              portKey: connector.portKey,
-              name: connector.name,
-              position: connector.geometry.anchor,
-              system: connector.system,
-              direction: connector.direction,
-              role: connector.role,
-              medium: connector.medium,
-              side: connector.side,
-              groupKey: connector.groupKey,
-              required: connector.required,
-              normal: connector.geometry.normal ?? null,
-            }))
-          : (JSON.parse(portsJson) as Array<{
-              portKey: string
-              name: string
-              position: [number, number, number]
-              system: string
-              direction: string
-              role?: string
-              medium?: string | null
-              side?: string | null
-              groupKey?: string | null
-              required?: boolean
-              normal?: [number, number, number] | null
-            }>)
-      const result = await replaceAssetPorts(selectedAssetId, nextPorts)
+      const result = await applyTopologyTemplate(selectedAssetId, selectedTemplateId)
       setConnectorsDraft(result.connectors)
-      setSelectedConnectorKey((current) =>
-        current && result.connectors.some((connector) => connector.connectorKey === current)
-          ? current
-          : result.connectors[0]?.connectorKey ?? null,
+      setSelectedTemplateDetail(result.template)
+      setItems((current) =>
+        current.map((item) =>
+          item.id === selectedAssetId
+            ? {
+                ...item,
+                topologyTemplateId: result.template.id,
+                topologyTemplateKey: result.template.templateKey,
+                topologyTemplateName: result.template.displayName,
+              }
+            : item,
+        ),
       )
-      setPortsJson(connectorsToJson(result.connectors))
-      setMessage(`已保存 ${result.connectors.length} 个连接点`)
+      setMessage(`已应用模板：${result.template.displayName}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -295,10 +278,20 @@ export function AssetsPage() {
     }
   }
 
-  const selectedConnector = useMemo(
-    () => connectorsDraft.find((connector) => connector.connectorKey === selectedConnectorKey) ?? null,
-    [connectorsDraft, selectedConnectorKey],
-  )
+  const handleSelectTemplate = async (templateId: string) => {
+    setSelectedTemplateId(templateId)
+    if (!templateId) {
+      setSelectedTemplateDetail(null)
+      return
+    }
+
+    try {
+      const detail = await getTopologyTemplate(templateId)
+      setSelectedTemplateDetail(detail)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
 
   const handleSaveBindings = async () => {
     if (!selectedAssetId) return
@@ -415,7 +408,7 @@ export function AssetsPage() {
             <h2>{selectedItem?.displayName ?? '未选择资产'}</h2>
             <p className="muted small">
               {selectedItem
-                ? `${selectedItem.assetKey} · ${selectedItem.status} · 已发布版本 ${versionsCount}`
+                ? `${selectedItem.assetKey} · ${selectedItem.status} · 模板 ${selectedItem.topologyTemplateName ?? '未选择'} · 已发布版本 ${versionsCount}`
                 : '从左侧列表选择一个资产开始编辑。'}
             </p>
           </div>
@@ -437,71 +430,25 @@ export function AssetsPage() {
           <div className="assets-editor-grid">
             <div className="assets-editor-column">
               <AssetForm value={assetDraft} disabled={saving || loadingDetail} onChange={setAssetDraft} onSave={handleSaveBasic} />
-              <section className="assets-panel">
-                <div className="assets-panel-header">
-                  <div>
-                    <h2>连接点配置</h2>
-                    <p className="muted small">默认按语义编辑；高级模式支持直接粘贴 JSON。</p>
-                  </div>
-                  <div className="assets-inline-actions">
-                    <button type="button" className={portsMode === 'table' ? 'primary' : 'secondary'} onClick={() => setPortsMode('table')}>
-                      表单模式
-                    </button>
-                    <button type="button" className={portsMode === 'json' ? 'primary' : 'secondary'} onClick={() => setPortsMode('json')}>
-                      JSON 模式
-                    </button>
-                    <button type="button" className="secondary" onClick={handleSavePorts} disabled={saving || loadingDetail}>
-                      保存连接点
-                    </button>
-                  </div>
-                </div>
-                {portsMode === 'table' ? (
-                  <div className="assets-editor-grid">
-                    <div className="assets-editor-column">
-                      <ConnectorList
-                        connectors={connectorsDraft}
-                        selectedConnectorKey={selectedConnectorKey}
-                        disabled={saving || loadingDetail}
-                        onSelectConnector={setSelectedConnectorKey}
-                        onAddConnector={() => {
-                          const nextConnector = {
-                            ...createEmptyConnector(),
-                            sortOrder: connectorsDraft.length,
-                          }
-                          setConnectorsDraft([...connectorsDraft, nextConnector])
-                          setSelectedConnectorKey(nextConnector.connectorKey)
-                        }}
-                        onRemoveConnector={(connectorKey) => {
-                          const nextConnectors = connectorsDraft
-                            .filter((connector) => connector.connectorKey !== connectorKey)
-                            .map((connector, index) => ({ ...connector, sortOrder: index }))
-                          setConnectorsDraft(nextConnectors)
-                          setSelectedConnectorKey(nextConnectors[0]?.connectorKey ?? null)
-                        }}
-                      />
-                    </div>
-                    <div className="assets-editor-column">
-                      <ConnectorDetailForm
-                        connector={selectedConnector}
-                        disabled={saving || loadingDetail}
-                        onChange={(nextConnector) => {
-                          setConnectorsDraft(
-                            connectorsDraft.map((connector) =>
-                              connector.connectorKey === selectedConnectorKey ? nextConnector : connector,
-                            ),
-                          )
-                          setSelectedConnectorKey(nextConnector.connectorKey)
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <label className="assets-json-editor">
-                    <span>连接点 JSON</span>
-                    <textarea aria-label="连接点 JSON" rows={12} value={portsJson} onChange={(e) => setPortsJson(e.target.value)} />
-                  </label>
-                )}
-              </section>
+              <TopologyTemplatePicker
+                templates={topologyTemplates}
+                selectedTemplateId={selectedTemplateId}
+                activeTemplateName={selectedItem.topologyTemplateName}
+                previewTemplate={selectedTemplateDetail}
+                disabled={saving || loadingDetail}
+                loading={loadingTemplates}
+                onSelectTemplate={handleSelectTemplate}
+                onApplyTemplate={handleApplyTemplate}
+              />
+              {selectedItem ? (
+                <AssetConnectorProgressCard
+                  assetId={selectedItem.id}
+                  completed={connectorProgress.completed}
+                  total={connectorProgress.total}
+                  requiredRemaining={connectorProgress.requiredRemaining}
+                  publishReady={connectorProgress.publishReady}
+                />
+              ) : null}
             </div>
             <div className="assets-editor-column">
               <AssetUploadPanel
@@ -511,7 +458,12 @@ export function AssetsPage() {
                 onSelectFile={setPendingFile}
                 onUpload={handleUpload}
               />
-              <AssetBindingsEditor bindings={bindingsDraft} disabled={saving || loadingDetail} onChange={setBindingsDraft} onSave={handleSaveBindings} />
+              <AssetBindingsEditor
+                bindings={bindingsDraft}
+                disabled={saving || loadingDetail}
+                onChange={setBindingsDraft}
+                onSave={handleSaveBindings}
+              />
             </div>
           </div>
         ) : null}

@@ -18,8 +18,67 @@ export const assetListItemSchema = z.object({
   bounds: assetBoundsSchema,
   modelUrl: z.string().min(1).nullable(),
   status: assetStatusSchema,
+  topologyTemplateId: z.string().min(1).nullable().optional(),
+  topologyTemplateKey: z.string().min(1).nullable().optional(),
+  topologyTemplateName: z.string().min(1).nullable().optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
+})
+
+export const topologyTemplateConnectorSchema = z.object({
+  id: z.string().min(1),
+  connectorKey: z.string().min(1),
+  name: z.string().min(1),
+  system: z.string().min(1),
+  role: z.string().min(1),
+  medium: z.string().min(1).nullable(),
+  direction: z.string().min(1),
+  required: z.boolean(),
+  sortOrder: z.number().int().nonnegative(),
+  geometry: z.object({
+    anchor: z.tuple([z.number(), z.number(), z.number()]),
+    normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
+  }),
+})
+
+export const topologyTemplateListItemSchema = z.object({
+  id: z.string().min(1),
+  templateKey: z.string().min(1),
+  displayName: z.string().min(1),
+  category: z.string().min(1),
+  description: z.string(),
+  defaultSystem: z.string().min(1),
+  connectorCount: z.number().int().nonnegative(),
+  updatedAt: z.string().min(1),
+})
+
+export const topologyTemplateDetailSchema = topologyTemplateListItemSchema.extend({
+  connectors: z.array(topologyTemplateConnectorSchema),
+})
+
+export const topologyTemplateListSchema = z.object({
+  items: z.array(topologyTemplateListItemSchema),
+})
+
+export const topologyTemplateConnectorMutationSchema = z.object({
+  connectorKey: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(120),
+  system: z.string().trim().min(1).max(80),
+  role: z.string().trim().min(1).max(80),
+  medium: z.string().trim().min(1).max(80).nullable().optional(),
+  direction: z.string().trim().min(1).max(40),
+  required: z.boolean().optional().default(false),
+  position: z.tuple([z.number(), z.number(), z.number()]),
+  normal: z.tuple([z.number(), z.number(), z.number()]).nullable().optional(),
+})
+
+export const topologyTemplateMutationSchema = z.object({
+  templateKey: z.string().trim().min(1).max(80),
+  displayName: z.string().trim().min(1).max(120),
+  category: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(240).default(''),
+  defaultSystem: z.string().trim().min(1).max(80),
+  connectors: z.array(topologyTemplateConnectorMutationSchema).min(1),
 })
 
 export const assetPortSchema = z.object({
@@ -104,6 +163,12 @@ export const assetPortsResponseSchema = z.object({
   ports: z.array(assetPortSchema),
 })
 
+export const applyTopologyTemplateResponseSchema = z.object({
+  template: topologyTemplateDetailSchema,
+  connectors: z.array(assetConnectorSchema),
+  ports: z.array(assetPortSchema),
+})
+
 export const assetBindingMutationSchema = z.object({
   bindingType: z.enum(['device_identity', 'point_mapping', 'runtime_field']),
   bindingKey: z.string().trim().min(1).max(120),
@@ -153,3 +218,6 @@ export type AssetListItem = z.infer<typeof assetListItemSchema>
 export type AssetMutationInput = z.infer<typeof assetMutationSchema>
 export type AssetPort = z.infer<typeof assetPortSchema>
 export type AssetUpload = z.infer<typeof assetUploadSchema>
+export type TopologyTemplateDetail = z.infer<typeof topologyTemplateDetailSchema>
+export type TopologyTemplateMutationInput = z.infer<typeof topologyTemplateMutationSchema>
+export type TopologyTemplateListItem = z.infer<typeof topologyTemplateListItemSchema>

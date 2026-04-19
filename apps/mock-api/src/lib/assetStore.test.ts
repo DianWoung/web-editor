@@ -263,3 +263,145 @@ test('createAssetStore persists connector semantics and still projects published
     ],
   })
 })
+
+test('createAssetStore lists topology templates and applies a template snapshot to an asset', async () => {
+  const dataRoot = await mkdtemp(path.join(tmpdir(), 'asset-store-'))
+  const store = createAssetStore(dataRoot)
+
+  const created = store.createAssetDraft({
+    assetKey: 'template_chiller_v1',
+    displayName: 'Template Chiller',
+    type: 'chiller',
+    defaultSystem: 'CHW',
+    assetVersion: 1,
+    renderStyle: 'box',
+    bounds: { halfExtents: [1, 1, 1] },
+    modelUploadId: null,
+  })
+
+  const templates = store.listTopologyTemplates()
+  assert.ok(templates.items.length > 0)
+
+  const selectedTemplate = templates.items.find((item) => item.templateKey === 'chw_supply_return')
+  assert.ok(selectedTemplate)
+
+  const applied = store.applyTopologyTemplate(created.asset.id, selectedTemplate.id)
+  assert.equal(applied.template.id, selectedTemplate.id)
+  assert.equal(applied.connectors.length, 2)
+  assert.deepEqual(
+    applied.connectors.map((connector) => ({
+      connectorKey: connector.connectorKey,
+      system: connector.system,
+      role: connector.role,
+      direction: connector.direction,
+      required: connector.required,
+    })),
+    [
+      {
+        connectorKey: 'chw_in',
+        system: 'CHW',
+        role: 'return',
+        direction: 'in',
+        required: true,
+      },
+      {
+        connectorKey: 'chw_out',
+        system: 'CHW',
+        role: 'supply',
+        direction: 'out',
+        required: true,
+      },
+    ],
+  )
+
+  const detail = store.getAsset(created.asset.id)
+  assert.equal(detail.asset.topologyTemplateId, selectedTemplate.id)
+  assert.equal(detail.asset.topologyTemplateKey, selectedTemplate.templateKey)
+  assert.equal(detail.asset.topologyTemplateName, selectedTemplate.displayName)
+  assert.equal(detail.connectors.length, 2)
+
+  store.publishAsset(created.asset.id)
+  assert.deepEqual(store.getPublishedPortsJson('template_chiller_v1'), {
+    ports: [
+      {
+        id: 'chw_in',
+        name: '冷冻回水入口',
+        position: [-1.2, 0, 0],
+        system: 'CHW',
+        direction: 'in',
+      },
+      {
+        id: 'chw_out',
+        name: '冷冻供水出口',
+        position: [1.2, 0, 0],
+        system: 'CHW',
+        direction: 'out',
+      },
+    ],
+  })
+})
+
+test('createAssetStore can create and update topology templates', async () => {
+  const dataRoot = await mkdtemp(path.join(tmpdir(), 'asset-store-'))
+  const store = createAssetStore(dataRoot)
+
+  const created = store.createTopologyTemplate({
+    templateKey: 'dual_power_signal',
+    displayName: '双电源信号接口',
+    category: 'power_signal',
+    description: '包含主电源、备用电源和控制信号的模板。',
+    defaultSystem: 'ELE',
+    connectors: [
+      {
+        connectorKey: 'power_main',
+        name: '主电源输入',
+        system: 'ELE',
+        role: 'power_in',
+        medium: 'electric',
+        direction: 'in',
+        required: true,
+        position: [-0.8, 0, 0],
+        normal: [-1, 0, 0],
+      },
+      {
+        connectorKey: 'signal_io',
+        name: '控制信号',
+        system: 'SIG',
+        role: 'signal',
+        medium: 'signal',
+        direction: 'in',
+        required: false,
+        position: [0.8, 0, 0],
+        normal: [1, 0, 0],
+      },
+    ],
+  })
+
+  assert.equal(created.templateKey, 'dual_power_signal')
+  assert.equal(created.connectors.length, 2)
+
+  const updated = store.updateTopologyTemplate(created.id, {
+    templateKey: 'dual_power_signal',
+    displayName: '双电源与信号接口',
+    category: 'power_signal',
+    description: '更新后的模板说明。',
+    defaultSystem: 'ELE',
+    connectors: [
+      {
+        connectorKey: 'power_main',
+        name: '主电源输入',
+        system: 'ELE',
+        role: 'power_in',
+        medium: 'electric',
+        direction: 'in',
+        required: true,
+        position: [-1, 0, 0],
+        normal: [-1, 0, 0],
+      },
+    ],
+  })
+
+  assert.equal(updated.displayName, '双电源与信号接口')
+  assert.equal(updated.connectors.length, 1)
+  assert.equal(updated.connectors[0]?.geometry.anchor[0], -1)
+})
