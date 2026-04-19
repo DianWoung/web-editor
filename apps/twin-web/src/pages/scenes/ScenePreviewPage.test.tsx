@@ -76,7 +76,7 @@ describe('ScenePreviewPage', () => {
     cleanup()
   })
 
-  it('loads scene summary metadata and renders preview actions', async () => {
+  it('loads scene summary metadata into the shared preview shell', async () => {
     render(
       <MemoryRouter initialEntries={['/scenes/scene-day/preview']}>
         <Routes>
@@ -88,11 +88,18 @@ describe('ScenePreviewPage', () => {
     await waitFor(() => {
       assert.equal(previewPageMocks.fetchNamedScene.mock.calls[0]?.[0], 'scene-day')
     })
-    await screen.findByRole('link', { name: '返回场景管理' })
+    await screen.findByText('效果预览')
+    await screen.findByRole('link', { name: '返回场景工作台' })
     await screen.findByRole('link', { name: '进入编辑' })
+    await screen.findByRole('button', { name: '重置视角' })
     await screen.findByText('白天冷站运行')
     await screen.findByText(/最近更新/)
     await screen.findByTestId('scene-preview-canvas')
+    assert.equal(
+      document.querySelector('.scene-preview-canvas-shell')?.classList.contains('scene-preview-canvas-shell--full'),
+      true,
+    )
+    await screen.findByText('场景摘要')
     assert.equal(screen.queryByRole('heading', { name: '设备预览' }), null)
     assert.equal(screen.queryByRole('heading', { name: '管线预览' }), null)
   })

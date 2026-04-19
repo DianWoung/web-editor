@@ -1,5 +1,6 @@
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
 import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 import { DeviceInstance } from '@/components/scene/DeviceInstance'
@@ -9,18 +10,63 @@ import { useSceneStore } from '@/store/sceneStore'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
+import { getSceneViewFrame, type SceneViewFrame } from '@/components/scene/sceneViewFrame'
 
 type Props = {
   modelUrlByAssetId: Record<string, string | null | undefined>
   renderStyleByAssetId: Record<string, RenderStyle | undefined>
   flowEnabled?: boolean
+  resetViewNonce?: number
 }
 
-export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnabled = false }: Props) {
+type OrbitControlsHandle = {
+  target: { set: (x: number, y: number, z: number) => void }
+  update: () => void
+  saveState?: () => void
+  minDistance: number
+  maxDistance: number
+}
+
+function ViewerOrbitControls({
+  frame,
+  resetViewNonce = 0,
+}: {
+  frame: SceneViewFrame
+  resetViewNonce?: number
+}) {
+  const ref = useRef<OrbitControlsHandle | null>(null)
+  const { camera } = useThree()
+
+  useLayoutEffect(() => {
+    camera.position.set(...frame.position)
+    camera.lookAt(...frame.target)
+    camera.updateProjectionMatrix()
+    ref.current?.target.set(...frame.target)
+    if (ref.current) {
+      ref.current.minDistance = frame.minDistance
+      ref.current.maxDistance = frame.maxDistance
+      ref.current.update()
+      ref.current.saveState?.()
+    }
+  }, [camera, frame, resetViewNonce])
+
+  return (
+    <OrbitControls
+      ref={ref as never}
+      makeDefault
+      minDistance={frame.minDistance}
+      maxDistance={frame.maxDistance}
+      maxPolarAngle={Math.PI * 0.49}
+    />
+  )
+}
+
+export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnabled = false, resetViewNonce = 0 }: Props) {
   const navigate = useNavigate()
   const devices = useSceneStore((s) => s.devices)
   const portGroups = useSceneStore((s) => s.portGroups)
   const pipes = useSceneStore((s) => s.pipes)
+  const frame = useMemo(() => getSceneViewFrame({ devices }), [devices])
 
   const openDevice = (id: string) => {
     navigate(`/detail/${encodeURIComponent(id)}`)
@@ -36,7 +82,7 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnab
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
       }}
-      camera={{ position: [14, 11, 14], fov: 45, near: 0.1, far: 500 }}
+      camera={{ position: [...frame.position], fov: 34, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%', background: sceneTheme.background }}
       onCreated={({ gl }) => configureTwinWebRenderer(gl)}
     >
@@ -62,8 +108,8 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnab
         shadow-normalBias={0.03}
         shadow-radius={6}
       />
-      <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
-      <RoomFloor showGrid={false} />
+      <ViewerOrbitControls frame={frame} resetViewNonce={resetViewNonce} />
+      <RoomFloor showGrid showPlane={false} />
       {pipes.map((p) => (
         <PipeRun key={p.id} pipe={p} devices={devices} portGroups={portGroups} flowEnabled={flowEnabled} />
       ))}
@@ -80,6 +126,7 @@ export function ViewerCanvas({ modelUrlByAssetId, renderStyleByAssetId, flowEnab
             flowEnabled={flowEnabled}
             mode="viewer"
             onOpenDevice={openDevice}
+            showLabelOverride={false}
           />
         )
       })}

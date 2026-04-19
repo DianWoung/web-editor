@@ -250,7 +250,7 @@ describe('AssetsPage', () => {
     cleanup()
   })
 
-  it('renders assets, loads details, and supports status filtering', async () => {
+  it('renders the asset page as a secondary configuration center and supports status filtering', async () => {
     render(
       <MemoryRouter initialEntries={['/assets']}>
         <Routes>
@@ -259,6 +259,8 @@ describe('AssetsPage', () => {
       </MemoryRouter>,
     )
 
+    await screen.findByRole('heading', { name: '资产配置中心' })
+    await screen.findByText(/从场景工作台进入/)
     await screen.findByRole('heading', { name: 'Heat Pump' })
     fireEvent.change(screen.getByLabelText('状态筛选'), { target: { value: 'published' } })
 
@@ -277,6 +279,7 @@ describe('AssetsPage', () => {
     )
 
     await screen.findByRole('heading', { name: 'Heat Pump' })
+    fireEvent.click(screen.getByRole('button', { name: '新增资产' }))
 
     fireEvent.change(screen.getByLabelText('新资产标识'), { target: { value: 'tower_v1' } })
     fireEvent.change(screen.getByLabelText('新资产名称'), { target: { value: 'Cooling Tower' } })

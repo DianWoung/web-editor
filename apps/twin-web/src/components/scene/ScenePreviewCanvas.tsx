@@ -1,4 +1,5 @@
-import { Canvas } from '@react-three/fiber'
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { ACESFilmicToneMapping, SRGBColorSpace } from 'three'
 import { OrbitControls } from '@react-three/drei/core/OrbitControls'
 
@@ -9,12 +10,56 @@ import type { SceneFile } from '@/schemas/scene'
 import { sceneTheme } from '@/theme/sceneTheme'
 import type { RenderStyle } from '@/services/loadEquipmentCatalog'
 import { configureTwinWebRenderer, twinWebShadowMapConfig } from '@/utils/webglCanvasSetup'
+import { getSceneViewFrame, type SceneViewFrame } from '@/components/scene/sceneViewFrame'
 
 type Props = {
   scene: SceneFile
   modelUrlByAssetId: Record<string, string | null | undefined>
   renderStyleByAssetId: Record<string, RenderStyle | undefined>
   flowEnabled?: boolean
+  resetViewNonce?: number
+}
+
+type OrbitControlsHandle = {
+  target: { set: (x: number, y: number, z: number) => void }
+  update: () => void
+  saveState?: () => void
+  minDistance: number
+  maxDistance: number
+}
+
+function PreviewOrbitControls({
+  frame,
+  resetViewNonce = 0,
+}: {
+  frame: SceneViewFrame
+  resetViewNonce?: number
+}) {
+  const ref = useRef<OrbitControlsHandle | null>(null)
+  const { camera } = useThree()
+
+  useLayoutEffect(() => {
+    camera.position.set(...frame.position)
+    camera.lookAt(...frame.target)
+    camera.updateProjectionMatrix()
+    ref.current?.target.set(...frame.target)
+    if (ref.current) {
+      ref.current.minDistance = frame.minDistance
+      ref.current.maxDistance = frame.maxDistance
+      ref.current.update()
+      ref.current.saveState?.()
+    }
+  }, [camera, frame, resetViewNonce])
+
+  return (
+    <OrbitControls
+      ref={ref as never}
+      makeDefault
+      minDistance={frame.minDistance}
+      maxDistance={frame.maxDistance}
+      maxPolarAngle={Math.PI * 0.49}
+    />
+  )
 }
 
 export function ScenePreviewCanvas({
@@ -22,7 +67,10 @@ export function ScenePreviewCanvas({
   modelUrlByAssetId,
   renderStyleByAssetId,
   flowEnabled = false,
+  resetViewNonce = 0,
 }: Props) {
+  const frame = useMemo(() => getSceneViewFrame(scene), [scene])
+
   return (
     <Canvas
       shadows={twinWebShadowMapConfig}
@@ -33,7 +81,7 @@ export function ScenePreviewCanvas({
         toneMapping: ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
       }}
-      camera={{ position: [14, 11, 14], fov: 45, near: 0.1, far: 500 }}
+      camera={{ position: [...frame.position], fov: 34, near: 0.1, far: 500 }}
       style={{ width: '100%', height: '100%', background: sceneTheme.background }}
       onCreated={({ gl }) => configureTwinWebRenderer(gl)}
     >
@@ -59,8 +107,8 @@ export function ScenePreviewCanvas({
         shadow-normalBias={0.03}
         shadow-radius={6}
       />
-      <OrbitControls makeDefault minDistance={4} maxDistance={80} maxPolarAngle={Math.PI * 0.49} />
-      <RoomFloor showGrid={false} />
+      <PreviewOrbitControls frame={frame} resetViewNonce={resetViewNonce} />
+      <RoomFloor showGrid showPlane={false} />
       {scene.pipes.map((pipe) => (
         <PipeRun
           key={pipe.id}
@@ -81,6 +129,7 @@ export function ScenePreviewCanvas({
             renderStyle={renderStyleByAssetId[device.assetId] ?? 'box'}
             flowEnabled={flowEnabled}
             mode="viewer"
+            showLabelOverride={false}
           />
         )
       })}

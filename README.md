@@ -58,26 +58,33 @@ npm run check
 - device detail polling forces refetches so runtime telemetry and alarms do not get stuck behind the client cache
 - `apps/mock-api/data/runtime/snapshot.json` can override generated runtime payloads when present
 
-## Scene Management Flow
+## Scene Operations Flow
 
 - `/` now redirects to `/scenes`
-- top-level navigation exposes only `场景管理`
-- `/scenes` is now the single scene workbench: create with `name + remark`, inspect saved scenes, and delete with confirmation
-- each scene row now links to:
-  - `/scenes/:sceneId/overview` for runtime overview and device-detail drilldown
-  - `/scenes/:sceneId/preview` for read-only 3D preview
-  - `/editor?sceneId=...` for editing
-- the editor keeps save in the top-right header, supports local undo for scene-structure changes, and only exposes `场景名称` + `场景备注` as scene-level fields
+- the product is now framed as a **scene operations workbench**
+- top navigation keeps `场景` as the only primary destination
+- `/assets` remains available, but is positioned as a secondary configuration entry rather than a co-equal primary module
+- `/scenes` is now the main operating surface:
+  - create scenes with `name + remark`
+  - inspect and switch saved scenes
+  - open scene subspaces:
+    - `/scenes/:sceneId/overview` for runtime overview and device-detail drilldown
+    - `/scenes/:sceneId/preview` for read-only 3D preview
+    - `/editor?sceneId=...` for editing
+- the editor, preview, and overview pages now share the same scene-context shell:
+  - a light information layer for context/actions
+  - a dark stage for 3D/runtime-heavy surfaces
+- the editor keeps save in the header, supports local undo for scene-structure changes, and only exposes `场景名称` + `场景备注` as scene-level fields
 - `mock-api` exposes the scene library endpoints used by that flow: `GET /api/scene/library`, `GET|PUT|DELETE /api/scene/library/:sceneId`, and `POST /api/scene/library/:sceneId/load`
 
 ## Asset Management Flow
 
-- `/assets` is the new asset management center
+- `/assets` is the asset configuration center
 - the frontend now creates, edits, publishes, archives, and deletes assets from that page
 - asset metadata, connectors, bindings, versions, and upload records are stored by the backend in a SQLite-backed repository layer
 - the asset editor now uses a semantic connector model first, while the backend still projects published connectors back to the legacy `ports` contract for scene/equipment consumers
 - model files are uploaded through `POST /api/assets/uploads` and served back through a storage-adapter URL
-- the scene editor palette now treats `/assets` as the primary asset-entry workflow and only lists published assets
+- the scene workbench treats `/assets` as a secondary configuration entry, while the scene editor palette still only lists published assets
 - published assets still flow into the existing equipment-consumer contract:
   - `GET /api/equipment/catalog`
   - `GET /api/equipment/:assetId`

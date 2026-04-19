@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { SceneSubspaceShell } from '@/components/layout/SceneSubspaceShell'
+import { SceneWorkspaceHeader } from '@/components/layout/SceneWorkspaceHeader'
 import { EditorCanvas } from '@/components/scene/EditorCanvas'
 import { DevicePalette } from '@/components/panels/DevicePalette'
 import { EditorCanvasHud } from '@/components/panels/EditorCanvasHud'
@@ -168,15 +170,34 @@ export function EditorPage() {
     setSaveStatus(`${sceneId ? '命名场景已保存' : '已保存'} ${new Date(result.data.updatedAt).toLocaleTimeString()}`)
   }, [sceneId, sceneName, sceneRemark])
 
+  const title = sceneName.trim() || (sceneId ? '未命名场景' : '当前工作场景')
+
   return (
-    <div className="editor-root">
-      <header className="editor-header">
-        <div>
-          <h1>场景编排</h1>
-          <p className="muted small">Esc 取消 · Delete 删除 · Home 重置视角</p>
-          {sceneId ? <p className="muted small">正在编辑命名场景</p> : <p className="muted small">当前工作场景</p>}
-          {sceneId ? (
-            <div className="editor-scene-meta">
+    <SceneSubspaceShell
+      className="editor-root"
+      header={
+        <SceneWorkspaceHeader
+          eyebrow="场景工作区"
+          title={title}
+          description="处理场景编排、对象属性与名称备注。"
+          actions={
+            <>
+              {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
+              <button type="button" className="primary" onClick={() => void saveScene()}>
+                保存
+              </button>
+              <button type="button" className="secondary" onClick={() => undo()} disabled={!canUndo}>
+                撤销
+              </button>
+              <Link className="secondary scene-link-button" to="/scenes">
+                返回场景工作台
+              </Link>
+            </>
+          }
+        >
+          <div className="scene-workspace-form-row">
+            <label className="scene-workspace-field">
+              <span>场景名称</span>
               <input
                 aria-label="场景名称"
                 className="toolbar-input"
@@ -184,6 +205,9 @@ export function EditorPage() {
                 onChange={(event) => setSceneName(event.target.value)}
                 placeholder="场景名称"
               />
+            </label>
+            <label className="scene-workspace-field">
+              <span>场景备注</span>
               <input
                 aria-label="场景备注"
                 className="toolbar-input"
@@ -191,42 +215,34 @@ export function EditorPage() {
                 onChange={(event) => setSceneRemark(event.target.value)}
                 placeholder="场景备注"
               />
-            </div>
-          ) : null}
+            </label>
+            <span className="toolbar-hint">Esc 取消 · Delete 删除 · Home 重置视角</span>
+          </div>
+        </SceneWorkspaceHeader>
+      }
+      stage={
+        <div className="editor-body editor-body--saas">
+          <DevicePalette
+            catalog={mergedCatalog}
+            loadError={catalogError}
+            pendingPlacement={pendingPlacement}
+            onSetPendingPlacement={setPendingPlacement}
+          />
+          <div className="editor-center">
+            <main className="editor-canvas-wrap">
+              <EditorCanvas
+                modelUrlByAssetId={modelGlbByAssetId}
+                renderStyleByAssetId={renderStyleByAssetId}
+                floorPlacementActive={!!pendingPlacement}
+                onFloorPlace={onFloorPlace}
+              />
+              <EditorCanvasHud />
+            </main>
+          </div>
+          <PropertiesPanel />
         </div>
-        <div className="editor-header-actions">
-          {saveStatus ? <span className="toolbar-hint">{saveStatus}</span> : null}
-          <button type="button" className="secondary" onClick={() => undo()} disabled={!canUndo}>
-            撤销
-          </button>
-          <button type="button" className="primary" onClick={() => void saveScene()}>
-            保存
-          </button>
-          <Link className="secondary scene-link-button" to="/scenes">
-            返回场景管理
-          </Link>
-        </div>
-      </header>
-      <div className="editor-body">
-        <DevicePalette
-          catalog={mergedCatalog}
-          loadError={catalogError}
-          pendingPlacement={pendingPlacement}
-          onSetPendingPlacement={setPendingPlacement}
-        />
-        <div className="editor-center">
-          <main className="editor-canvas-wrap">
-            <EditorCanvas
-              modelUrlByAssetId={modelGlbByAssetId}
-              renderStyleByAssetId={renderStyleByAssetId}
-              floorPlacementActive={!!pendingPlacement}
-              onFloorPlace={onFloorPlace}
-            />
-            <EditorCanvasHud />
-          </main>
-        </div>
-        <PropertiesPanel />
-      </div>
-    </div>
+      }
+      stageClassName="scene-subspace__stage--editor"
+    />
   )
 }
