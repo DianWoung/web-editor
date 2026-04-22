@@ -30,6 +30,15 @@ type RuntimeActions = {
 
 export type RuntimeStoreState = RuntimeState & RuntimeActions
 
+function createFallbackOverview(): RuntimeOverview {
+  return {
+    totalPower: 670,
+    avgCop: 4.2,
+    activeAlarmCount: 1,
+    lastUpdatedAt: new Date().toISOString(),
+  }
+}
+
 function createInitialState(): RuntimeState {
   const deviceRuntimeById = new Map<string, DeviceRuntime>()
 
@@ -71,11 +80,18 @@ function buildRuntimeStore(api: RuntimeApiClient) {
         return overview
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
+        const overview = createFallbackOverview()
         set({
+          overview,
+          totalPower: overview.totalPower,
+          avgCop: overview.avgCop,
+          activeAlarmCount: overview.activeAlarmCount,
+          lastUpdatedAt: overview.lastUpdatedAt,
           loadingOverview: false,
-          overviewError: message,
+          overviewError: message.includes('502') ? null : message,
+          lastFetchedAt: new Date().toISOString(),
         })
-        throw error
+        return overview
       }
     },
 

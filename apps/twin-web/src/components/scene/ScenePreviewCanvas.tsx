@@ -18,6 +18,7 @@ type Props = {
   renderStyleByAssetId: Record<string, RenderStyle | undefined>
   flowEnabled?: boolean
   resetViewNonce?: number
+  onOpenDevice?: (id: string) => void
 }
 
 type OrbitControlsHandle = {
@@ -68,6 +69,7 @@ export function ScenePreviewCanvas({
   renderStyleByAssetId,
   flowEnabled = false,
   resetViewNonce = 0,
+  onOpenDevice,
 }: Props) {
   const frame = useMemo(() => getSceneViewFrame(scene), [scene])
 
@@ -130,6 +132,7 @@ export function ScenePreviewCanvas({
             flowEnabled={flowEnabled}
             mode="viewer"
             showLabelOverride={false}
+            onOpenDevice={onOpenDevice}
           />
         )
       })}

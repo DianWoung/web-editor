@@ -10,8 +10,8 @@ export type SceneViewFrame = {
 }
 
 const DEFAULT_FRAME: SceneViewFrame = {
-  target: [0, 1.6, 0],
-  position: [12, 8, 12],
+  target: [0, 2.4, 0],
+  position: [10.8, 8.2, 12.4],
   distance: 14,
   minDistance: 4,
   maxDistance: 52,
@@ -55,15 +55,15 @@ export function getSceneViewFrame(scene: Pick<SceneFile, 'devices'>): SceneViewF
 
   const horizontalSpan = Math.max(spanX, spanZ, 6)
   const verticalSpan = Math.max(spanY, 3)
-  const distance = Math.max(horizontalSpan * 0.92, verticalSpan * 2.4, 10)
-  const targetY = bounds.minY + verticalSpan * 0.22
+  const distance = Math.max(horizontalSpan * 0.76, verticalSpan * 1.45, 10)
+  const targetY = bounds.minY + verticalSpan * 0.55
 
   return {
     target: [centerX, targetY, centerZ],
     position: [
       centerX + distance * 0.72,
-      targetY + Math.max(distance * 0.88, verticalSpan * 1.6),
-      centerZ + distance * 0.72,
+      targetY + Math.max(distance * 0.62, verticalSpan * 1.05),
+      centerZ + distance * 0.94,
     ],
     distance,
     minDistance: Math.max(4, distance * 0.45),

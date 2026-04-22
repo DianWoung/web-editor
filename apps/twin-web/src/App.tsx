@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 import { AppNav } from '@/components/layout/AppNav'
+import { ClientNav } from '@/components/layout/ClientNav'
+import { enableClientView, isClientViewEnabled } from '@/utils/clientViewAccess'
 
 const OverviewPage = lazy(async () => {
   const mod = await import('@/pages/overview/OverviewPage')
@@ -42,10 +44,35 @@ const ScenePreviewPage = lazy(async () => {
   return { default: mod.ScenePreviewPage }
 })
 
-function AppShell() {
+const ClientOverviewPage = lazy(async () => {
+  const mod = await import('@/pages/client/ClientOverviewPage')
+  return { default: mod.ClientOverviewPage }
+})
+
+const ClientScenePage = lazy(async () => {
+  const mod = await import('@/pages/client/ClientScenePage')
+  return { default: mod.ClientScenePage }
+})
+
+const ClientStrategyPage = lazy(async () => {
+  const mod = await import('@/pages/client/ClientStrategyPage')
+  return { default: mod.ClientStrategyPage }
+})
+
+const ClientDeviceDetailPage = lazy(async () => {
+  const mod = await import('@/pages/client/ClientDeviceDetailPage')
+  return { default: mod.ClientDeviceDetailPage }
+})
+
+const ClientReportsPage = lazy(async () => {
+  const mod = await import('@/pages/client/ClientReportsPage')
+  return { default: mod.ClientReportsPage }
+})
+
+function AppShell({ mode = 'editor' }: { mode?: 'editor' | 'client' }) {
   return (
     <div className="app-shell">
-      <AppNav />
+      {mode === 'client' ? <ClientNav /> : <AppNav />}
       <div className="app-shell-body">
         <Suspense fallback={null}>
           <Outlet />
@@ -53,6 +80,21 @@ function AppShell() {
       </div>
     </div>
   )
+}
+
+function ClientShellRoute() {
+  const location = useLocation()
+  const isClientPath = location.pathname === '/c' || location.pathname.startsWith('/c/')
+
+  if (!isClientViewEnabled() && (isClientPath || new URLSearchParams(location.search).get('mode') === 'viewer')) {
+    enableClientView()
+  }
+
+  if (!isClientViewEnabled()) {
+    return <Navigate to="/scenes" replace />
+  }
+
+  return <AppShell mode="client" />
 }
 
 export default function App() {
@@ -70,6 +112,14 @@ export default function App() {
           <Route path="/scenes/:sceneId/preview" element={<ScenePreviewPage />} />
           <Route path="/detail/:deviceId" element={<DeviceDetailPage />} />
           <Route path="/editor" element={<EditorPage />} />
+        </Route>
+        <Route element={<ClientShellRoute />}>
+          <Route path="/c" element={<Navigate to="/c/overview" replace />} />
+          <Route path="/c/overview" element={<ClientOverviewPage />} />
+          <Route path="/c/scene/:sceneId?" element={<ClientScenePage />} />
+          <Route path="/c/strategy" element={<ClientStrategyPage />} />
+          <Route path="/c/device/:deviceId" element={<ClientDeviceDetailPage />} />
+          <Route path="/c/reports" element={<ClientReportsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

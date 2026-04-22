@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { enableClientView } from '@/utils/clientViewAccess'
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   `app-nav-link${isActive ? ' app-nav-link--active' : ''}`
@@ -24,6 +25,15 @@ export function AppNav() {
       <div className="app-nav-utility">
         <NavLink to="/assets" className="app-nav-utility__link">
           配置入口
+        </NavLink>
+        <NavLink
+          to="/c/overview"
+          className="app-nav-utility__link"
+          onClick={() => {
+            enableClientView()
+          }}
+        >
+          客户端视图
         </NavLink>
       </div>
     </header>
